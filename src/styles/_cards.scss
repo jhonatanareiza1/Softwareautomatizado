@@ -1,0 +1,39 @@
+@use './variables' as *;
+
+.card {
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-sm;
+}
+
+.card--interactive {
+    transition:
+        transform $transition-fast,
+        box-shadow $transition-fast;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: $shadow-md;
+    }
+}
+
+.card--purple {
+    background: $color-purple;
+    color: $color-white;
+}
+
+.card--blue {
+    background: $color-blue;
+    color: $color-white;
+}
+
+.card--green {
+    background: $color-green;
+    color: $color-white;
+}
+
+.card--orange {
+    background: $color-orange;
+    color: $color-white;
+}

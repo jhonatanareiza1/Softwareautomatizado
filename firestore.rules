@@ -1,0 +1,941 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId;
+    }
+
+    function userExists(userId) {
+      return exists(
+        /databases/$(database)/documents/users/$(userId)
+      );
+    }
+
+    function getUser(userId) {
+      return get(
+        /databases/$(database)/documents/users/$(userId)
+      );
+    }
+
+function isParent() {
+  return isAuthenticated()
+    && exists(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    )
+    && get(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    ).data.role == 'parent';
+}
+
+function isTeacher() {
+  return isAuthenticated()
+    && exists(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    )
+    && get(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    ).data.role == 'teacher';
+}
+
+function isStudent() {
+  return isAuthenticated()
+    && exists(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    )
+    && get(
+      /databases/$(database)/documents/users/$(request.auth.uid)
+    ).data.role == 'student';
+}
+    function isFamilyMember(familyId) {
+      return isAuthenticated()
+        && exists(
+          /databases/$(database)/documents/familyMembers/$(familyId + '_' + request.auth.uid)
+        );
+    }
+
+    function isGroupStudent(groupId) {
+      return isAuthenticated()
+        && exists(
+          /databases/$(database)/documents/groupMembers/$(groupId + '_' + request.auth.uid)
+        );
+    }
+
+    function isGroupTeacher(groupId) {
+      return isAuthenticated()
+        && exists(
+          /databases/$(database)/documents/groupTeachers/$(groupId + '_' + request.auth.uid)
+        );
+    }
+
+    // ============================================================
+    // USERS
+    // ============================================================
+
+match /users/{userId} {
+
+  allow read: if isAuthenticated()
+    && isOwner(userId);
+
+  allow create: if isOwner(userId)
+    && request.resource.data.uid == userId;
+
+  allow update: if false;
+
+  allow delete: if false;
+}
+    // ============================================================
+    // STUDENTS
+    // ============================================================
+
+match /students/{studentId} {
+
+  allow read: if isAuthenticated()
+    && (
+      studentId == request.auth.uid
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'parent'
+      )
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'teacher'
+      )
+    );
+
+  allow create: if isAuthenticated()
+    && (
+      studentId == request.auth.uid
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'parent'
+      )
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'teacher'
+      )
+    );
+
+  allow update: if isAuthenticated()
+    && (
+      studentId == request.auth.uid
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'parent'
+      )
+      || (
+        userExists(request.auth.uid)
+        && getUser(request.auth.uid).data.role == 'teacher'
+      )
+    );
+
+  allow delete: if false;
+}
+    // ============================================================
+    // PARENTS
+    // ============================================================
+
+match /parents/{parentId} {
+
+  allow read: if isAuthenticated()
+    && parentId == request.auth.uid;
+
+  allow create: if isAuthenticated()
+    && parentId == request.auth.uid
+    && request.resource.data.userId == request.auth.uid;
+
+  allow update: if isAuthenticated()
+    && parentId == request.auth.uid;
+
+  allow delete: if false;
+}
+
+    // ============================================================
+    // TEACHERS
+    // ============================================================
+
+    match /teachers/{teacherId} {
+
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isOwner(
+        request.resource.data.userId
+      );
+
+      allow update: if isOwner(
+        resource.data.userId
+      );
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // FAMILIES
+    // ============================================================
+
+    match /families/{familyId} {
+
+      allow read: if isFamilyMember(familyId);
+
+      allow create: if isParent()
+        && request.resource.data.ownerUserId
+        == request.auth.uid;
+
+      allow update: if isParent()
+        && resource.data.ownerUserId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // FAMILY MEMBERS
+    // ============================================================
+
+    match /familyMembers/{memberId} {
+
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isParent();
+
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GROUPS
+    // ============================================================
+
+    match /groups/{groupId} {
+
+      allow read: if isAuthenticated()
+        && (
+          isGroupStudent(groupId)
+          || isGroupTeacher(groupId)
+        );
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isGroupTeacher(groupId);
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GROUP MEMBERS
+    // ============================================================
+
+    match /groupMembers/{memberId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || isGroupTeacher(resource.data.groupId)
+        );
+
+      allow create: if isTeacher()
+        && isGroupTeacher(
+          request.resource.data.groupId
+        );
+
+      allow update: if isTeacher()
+        && isGroupTeacher(
+          resource.data.groupId
+        );
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GROUP TEACHERS
+    // ============================================================
+
+    match /groupTeachers/{teacherMemberId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.teacherId == request.auth.uid
+          || isGroupTeacher(resource.data.groupId)
+        );
+
+      allow create: if isTeacher()
+        && request.resource.data.teacherId
+        == request.auth.uid;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // INVITATIONS
+    // ============================================================
+
+    match /invitations/{invitationId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.invitedUserId
+          == request.auth.uid
+          ||
+          resource.data.invitedByUserId
+          == request.auth.uid
+        );
+
+      allow create: if isAuthenticated()
+        && request.resource.data.invitedByUserId
+        == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && (
+          resource.data.invitedUserId
+          == request.auth.uid
+          ||
+          resource.data.invitedByUserId
+          == request.auth.uid
+        );
+
+      allow delete: if false;
+    }
+    // ============================================================
+    // SUBJECTS
+    // ============================================================
+
+    match /subjects/{subjectId} {
+
+      // Lectura:
+      // - docentes autenticados
+      // - estudiantes autenticados
+      // - padres autenticados
+      allow read: if isAuthenticated()
+        && (
+          isTeacher()
+          || isStudent()
+          || isParent()
+        );
+
+      // Solo un docente puede crear una materia
+      // y debe quedar como propietario.
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // Solo el docente propietario puede modificarla.
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // No se elimina desde cliente.
+      allow delete: if false;
+    }
+
+        // ============================================================
+    // TOPICS
+    // ============================================================
+
+    match /topics/{topicId} {
+
+      // Lectura:
+      // - docentes autenticados
+      // - estudiantes autenticados
+      // - padres autenticados
+      allow read: if isAuthenticated()
+        && (
+          isTeacher()
+          || isStudent()
+          || isParent()
+        );
+
+      // Solo un docente puede crear un tema
+      // y debe quedar como propietario.
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // Solo el docente propietario puede modificarlo.
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // No se elimina desde cliente.
+      allow delete: if false;
+    }
+        // ============================================================
+    // ACTIVITIES
+    // ============================================================
+
+    match /activities/{activityId} {
+
+      // Lectura:
+      // - docentes
+      // - estudiantes
+      // - padres
+      allow read: if isAuthenticated()
+        && (
+          isTeacher()
+          || isStudent()
+          || isParent()
+        );
+
+      // Solo un docente puede crear una actividad
+      // y debe quedar asociada a él.
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // Solo el docente propietario puede modificarla.
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // No se elimina desde cliente.
+      allow delete: if false;
+    }
+
+// ============================================================
+// TOPICS
+// ============================================================
+
+match /topics/{topicId} {
+
+  // Cualquier usuario autenticado puede consultar topics.
+  allow read: if isAuthenticated();
+
+  // Solo docentes pueden crear topics.
+  allow create: if isTeacher()
+    && request.resource.data.ownerTeacherId
+    == request.auth.uid;
+
+  // Solo el docente propietario puede modificarlo
+  // y no puede transferir la propiedad.
+  allow update: if isTeacher()
+    && resource.data.ownerTeacherId
+    == request.auth.uid
+    && request.resource.data.ownerTeacherId
+    == request.auth.uid;
+
+  allow delete: if false;
+}
+    // ============================================================
+    // ACTIVITIES
+    // ============================================================
+
+    match /activities/{activityId} {
+
+      // Cualquier usuario autenticado puede consultar actividades.
+      allow read: if isAuthenticated();
+
+      // Solo docentes pueden crear actividades.
+      // La actividad debe quedar asociada al docente autenticado.
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // Solo el docente propietario puede modificarla.
+      // No puede transferir la propiedad a otro usuario.
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      // Las actividades no se eliminan directamente desde el cliente.
+      allow delete: if false;
+    }
+    // ============================================================
+    // GAME DEFINITIONS
+    // ============================================================
+
+    match /gameDefinitions/{gameDefinitionId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // ACTIVITY CONFIGS
+    // ============================================================
+
+    match /activityConfigs/{configId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // QUIZZES
+    // ============================================================
+
+    match /quizzes/{quizId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // QUIZ QUESTIONS
+    // ============================================================
+
+    match /quizQuestions/{questionId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // VIDEOS
+    // ============================================================
+
+    match /videos/{videoId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // LISTENINGS
+    // ============================================================
+
+    match /listenings/{listeningId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // DIALOGUES
+    // ============================================================
+
+    match /dialogues/{dialogueId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // CHALLENGES
+    // ============================================================
+
+    match /challenges/{challengeId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // ACTIVITY ASSIGNMENTS
+    // ============================================================
+
+    match /activityAssignments/{assignmentId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.teacherId == request.auth.uid
+          || resource.data.studentId == request.auth.uid
+          || isGroupTeacher(resource.data.groupId)
+          || isGroupStudent(resource.data.groupId)
+        );
+
+      allow create: if isTeacher()
+        && request.resource.data.teacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.teacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+        // ============================================================
+    // ATTEMPTS
+    // ============================================================
+
+    match /attempts/{attemptId} {
+
+      // El estudiante puede consultar sus propios intentos.
+      // El docente puede consultar intentos de sus grupos.
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // La creación de intentos será controlada posteriormente
+      // por submitAttempt mediante Cloud Function.
+      allow create: if false;
+
+      // Los intentos no se modifican directamente desde cliente.
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // ATTEMPT ANSWERS
+    // ============================================================
+
+    match /attemptAnswers/{answerId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // Las respuestas pertenecen a un intento y serán
+      // persistidas/validadas mediante backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // PROGRESS
+    // ============================================================
+
+    match /progress/{progressId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // XP, puntuación, avance y estadísticas sensibles
+      // no pueden ser manipulados directamente por el cliente.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GRADES
+    // ============================================================
+
+    match /grades/{gradeId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // Las calificaciones se crean/modifican mediante backend
+      // y únicamente docentes autorizados pueden modificarlas
+      // mediante la Cloud Function correspondiente.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GRADE CHANGES
+    // ============================================================
+
+    match /gradeChanges/{changeId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // Auditoría de cambios: únicamente backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GAMIFICATION PROFILES
+    // ============================================================
+
+    match /gamificationProfiles/{profileId} {
+
+      allow read: if isAuthenticated()
+        && resource.data.studentId == request.auth.uid;
+
+      // XP, nivel, EduCoins, etc. son autoridad del backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // GAMIFICATION TRANSACTIONS
+    // ============================================================
+
+    match /gamificationTransactions/{transactionId} {
+
+      allow read: if isAuthenticated()
+        && resource.data.studentId == request.auth.uid;
+
+      // Las transacciones son inmutables y únicamente backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // ACHIEVEMENTS
+    // ============================================================
+
+    match /achievements/{achievementId} {
+
+      allow read: if isAuthenticated();
+
+      allow create: if isTeacher()
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.ownerTeacherId
+        == request.auth.uid
+        && request.resource.data.ownerTeacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // STUDENT ACHIEVEMENTS
+    // ============================================================
+
+    match /studentAchievements/{studentAchievementId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // Desbloqueo exclusivamente mediante backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // CLASS SESSIONS
+    // ============================================================
+
+    match /classSessions/{sessionId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.teacherId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupStudent(resource.data.groupId)
+          )
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      allow create: if isTeacher()
+        && request.resource.data.teacherId
+        == request.auth.uid;
+
+      allow update: if isTeacher()
+        && resource.data.teacherId
+        == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // SESSION PARTICIPANTS
+    // ============================================================
+
+    match /sessionParticipants/{participantId} {
+
+      allow read: if isAuthenticated()
+        && (
+          resource.data.studentId == request.auth.uid
+          || (
+            resource.data.groupId != null
+            && isGroupTeacher(resource.data.groupId)
+          )
+        );
+
+      // La entrada/salida de sesiones se controlará mediante
+      // las operaciones de sesión del backend.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // CONTENT GENERATION REQUESTS
+    // ============================================================
+
+    match /contentGenerationRequests/{requestId} {
+
+      allow read: if isAuthenticated()
+        && resource.data.requestedByUserId
+        == request.auth.uid;
+
+      // La generación mediante IA pasa por Cloud Functions.
+      allow create: if false;
+
+      allow update: if false;
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // DENY EVERYTHING ELSE
+    // ============================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

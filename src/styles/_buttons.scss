@@ -1,0 +1,67 @@
+@use './variables' as *;
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+
+    min-height: 44px;
+    padding: 0.75rem 1.25rem;
+
+    border: none;
+    border-radius: $radius-md;
+
+    font-weight: 700;
+
+    transition:
+        transform $transition-fast,
+        box-shadow $transition-fast,
+        background-color $transition-fast;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: $shadow-sm;
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        transform: none;
+    }
+}
+
+.button--primary {
+    color: $color-white;
+    background: $color-blue;
+}
+
+.button--success {
+    color: $color-white;
+    background: $color-green;
+}
+
+.button--purple {
+    color: $color-white;
+    background: $color-purple;
+}
+
+.button--orange {
+    color: $color-white;
+    background: $color-orange;
+}
+
+.button--yellow {
+    color: $color-text;
+    background: $color-yellow;
+}
+
+.button--outline {
+    color: $color-blue;
+    background: transparent;
+    border: 2px solid $color-blue;
+}

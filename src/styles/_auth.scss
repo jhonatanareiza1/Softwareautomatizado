@@ -1,0 +1,179 @@
+@use './variables' as *;
+
+.auth-page {
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: $spacing-lg;
+
+    padding: $spacing-xl;
+
+    background: $color-background;
+}
+
+.auth-page__brand {
+    text-align: center;
+
+    h2 {
+        margin-bottom: $spacing-xs;
+        color: $color-navy;
+        font-size: 2rem;
+    }
+
+    p {
+        color: $color-text-secondary;
+    }
+}
+
+.auth-card {
+    width: min(100%, 460px);
+
+    padding: $spacing-xl;
+
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-lg;
+}
+
+.auth-card__header {
+    margin-bottom: $spacing-lg;
+    text-align: center;
+
+    h1 {
+        margin-bottom: $spacing-sm;
+        color: $color-navy;
+    }
+
+    p {
+        color: $color-text-secondary;
+    }
+}
+
+.social-login {
+    display: grid;
+    gap: $spacing-sm;
+}
+
+.social-login__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+
+    width: 100%;
+    min-height: 46px;
+
+    padding: 0.75rem 1rem;
+
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+
+    background: $color-white;
+    color: $color-text;
+
+    font-weight: 600;
+
+    transition:
+        background-color $transition-fast,
+        box-shadow $transition-fast;
+
+    &:hover {
+        background: $color-background;
+        box-shadow: $shadow-sm;
+    }
+
+    span {
+        display: grid;
+        place-items: center;
+
+        width: 24px;
+        height: 24px;
+    }
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+
+    margin: $spacing-lg 0;
+
+    color: $color-text-secondary;
+
+    &::before,
+    &::after {
+        content: '';
+
+        flex: 1;
+
+        height: 1px;
+
+        background: $color-border;
+    }
+}
+
+.auth-divider span {
+    font-size: 0.875rem;
+}
+
+.auth-form {
+    display: grid;
+    gap: $spacing-md;
+}
+
+.form-field {
+    display: grid;
+    gap: $spacing-xs;
+
+    label {
+        font-weight: 600;
+    }
+
+    input {
+        width: 100%;
+        min-height: 46px;
+
+        padding: 0.75rem 1rem;
+
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+
+        outline: none;
+
+        transition:
+            border-color $transition-fast,
+            box-shadow $transition-fast;
+
+        &:focus {
+            border-color: $color-blue;
+            box-shadow: 0 0 0 3px rgba(23, 105, 232, 0.12);
+        }
+    }
+}
+
+.auth-form__submit {
+    width: 100%;
+    margin-top: $spacing-sm;
+}
+
+.auth-card__footer {
+    margin-top: $spacing-lg;
+
+    text-align: center;
+
+    color: $color-text-secondary;
+
+    a {
+        color: $color-blue;
+        font-weight: 700;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}

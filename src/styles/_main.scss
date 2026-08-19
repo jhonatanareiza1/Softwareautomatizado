@@ -1,0 +1,16 @@
+@use './variables';
+@use './reset';
+@use './typography';
+@use './buttons';
+@use './cards';
+@use './auth';
+
+.app {
+    min-height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 2rem;
+}
