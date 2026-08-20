@@ -6,3 +6,4 @@ export * from './teacher.types';
 export * from './family.types';
 export * from './group.types';
 export * from './invitation.types';
+export * from './gamification.types';

@@ -1,0 +1,568 @@
+@use './variables' as *;
+
+.student-shell {
+    min-height: 100vh;
+    background: #f5f7fd;
+}
+
+.student-header {
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.75rem clamp(1rem, 4vw, 4rem);
+    background: #101942;
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(13, 27, 94, 0.15);
+}
+
+.student-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #fff;
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    white-space: nowrap;
+
+    span span {
+        color: #78c83b;
+    }
+}
+
+.student-brand__mark {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 1.25rem;
+}
+
+.student-header__nav {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-inline: auto;
+
+    a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        padding: 0.68rem 0.85rem;
+        color: #f5f6ff;
+        border-radius: 10px;
+        font-size: 0.88rem;
+        font-weight: 700;
+
+        &:hover,
+        &.is-active {
+            background: #4b32ab;
+        }
+    }
+}
+
+.student-header__account {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.coin-balance {
+    padding: 0.55rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    font-weight: 800;
+}
+
+.student-avatar {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 2px solid #b6e672;
+    border-radius: 50%;
+    background: #6c47dc;
+    color: #fff;
+    font-weight: 800;
+}
+
+.student-dashboard {
+    width: min(1200px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 2.75rem 0 4rem;
+}
+
+.student-welcome {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    padding: 2rem 2.25rem;
+    border-radius: 24px;
+    background: linear-gradient(120deg, #fff 0%, #edf1ff 100%);
+    box-shadow: $shadow-sm;
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: -6rem;
+        bottom: -9rem;
+        width: 23rem;
+        height: 23rem;
+        border-radius: 50%;
+        background: #dce7ff;
+    }
+
+    h1 {
+        margin: 0.2rem 0 0.45rem;
+        color: $color-navy;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+    }
+
+    p:not(.eyebrow) {
+        color: $color-text-secondary;
+        font-size: 1.05rem;
+    }
+}
+
+.student-welcome__mascot {
+    z-index: 1;
+    margin-right: 2rem;
+    font-size: clamp(4rem, 10vw, 7rem);
+    transform: rotate(12deg);
+}
+
+.eyebrow {
+    color: $color-purple;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.student-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.25rem 0;
+}
+
+.student-stat {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem;
+
+    div {
+        display: grid;
+        gap: 0.05rem;
+    }
+
+    span {
+        color: $color-text-secondary;
+        font-size: 0.85rem;
+    }
+
+    strong {
+        color: $color-navy;
+        font-size: 1.6rem;
+    }
+
+    small {
+        color: $color-purple;
+        font-weight: 700;
+    }
+
+    .is-success {
+        color: #199c42;
+    }
+}
+
+.student-stat__icon {
+    display: grid;
+    flex: 0 0 54px;
+    place-items: center;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    font-size: 1.7rem;
+}
+
+.student-stat__icon--purple {
+    color: #7042d8;
+    background: #eee8ff;
+}
+
+.student-stat__icon--green {
+    color: #319844;
+    background: #e3f7e8;
+}
+
+.student-stat__icon--orange {
+    background: #fff0d8;
+}
+
+.student-panel,
+.student-section {
+    margin-top: 1.5rem;
+}
+
+.student-panel {
+    padding: 1.5rem;
+    border: 1px solid $color-border;
+    border-radius: $radius-xl;
+    background: #fff;
+    box-shadow: $shadow-sm;
+}
+
+.student-progress p {
+    margin-top: 0.75rem;
+    color: $color-text-secondary;
+}
+
+.section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    h2 {
+        margin-top: 0.18rem;
+        color: $color-navy;
+        font-size: 1.4rem;
+    }
+
+    >strong {
+        color: $color-navy;
+        font-size: 0.9rem;
+    }
+
+    >a {
+        color: $color-blue;
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+}
+
+.progress-track,
+.mini-progress {
+    overflow: hidden;
+    height: 10px;
+    border-radius: 999px;
+    background: #e6e9f5;
+}
+
+.progress-track span,
+.mini-progress i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.progress-track span {
+    background: linear-gradient(90deg, #6a3ddd, #8b4cf2);
+}
+
+.mini-progress {
+    height: 7px;
+
+    i {
+        background: $color-purple;
+    }
+}
+
+.mini-progress--blue i {
+    background: $color-blue;
+}
+
+.mini-progress--orange i {
+    background: $color-orange;
+}
+
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.game-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 245px;
+    padding: 1.25rem;
+    border-radius: 18px;
+    color: #fff;
+
+    &::after {
+        content: '';
+        position: absolute;
+        z-index: -1;
+        right: -2rem;
+        bottom: -3rem;
+        width: 10rem;
+        height: 10rem;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    p {
+        margin-top: 1.1rem;
+        font-size: 0.78rem;
+        opacity: 0.85;
+    }
+
+    h3 {
+        margin: 0.1rem 0 0.35rem;
+        font-size: 1.35rem;
+    }
+
+    >span {
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    button {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.55rem;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.95);
+        color: $color-navy;
+        font-weight: 800;
+    }
+}
+
+.game-card--purple {
+    background: linear-gradient(145deg, #241161, #6f43d8);
+}
+
+.game-card--blue {
+    background: linear-gradient(145deg, #057daa, #1769e8);
+}
+
+.game-card--green {
+    background: linear-gradient(145deg, #006443, #42af49);
+}
+
+.game-card--orange {
+    background: linear-gradient(145deg, #f05216, #ffad11);
+}
+
+.game-card__sparkle {
+    position: absolute;
+    top: 0.8rem;
+    right: 1rem;
+    font-size: 1.35rem;
+}
+
+.game-card__icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-top: 1rem;
+    border-radius: 19px;
+    background: rgba(255, 255, 255, 0.17);
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+.challenge-grid,
+.subject-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.challenge-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid $color-border;
+    border-radius: 15px;
+    background: #fff;
+
+    >span {
+        font-size: 1.8rem;
+    }
+
+    h3 {
+        font-size: 0.83rem;
+    }
+
+    p {
+        margin: 0.32rem 0;
+        color: $color-text-secondary;
+        font-size: 0.76rem;
+    }
+
+    >strong {
+        color: #1ba146;
+        font-size: 0.76rem;
+        white-space: nowrap;
+    }
+}
+
+.subject-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.subject-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem;
+    border: 1px solid $color-border;
+    border-radius: 15px;
+    background: #fff;
+
+    h3 {
+        font-size: 0.9rem;
+    }
+
+    strong {
+        display: block;
+        margin-top: 0.35rem;
+        color: $color-navy;
+        font-size: 1.45rem;
+    }
+
+    p {
+        color: $color-text-secondary;
+        font-size: 0.76rem;
+    }
+}
+
+.subject-ring {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: conic-gradient(#41ae4a var(--progress),
+            #eaf2ed 0);
+
+    &::after {
+        content: '';
+        display: block;
+        width: 35px;
+        height: 35px;
+        margin: 6.5px;
+        border-radius: 50%;
+        background: #fff;
+    }
+}
+
+.subject-ring--blue {
+    background: conic-gradient($color-blue var(--progress),
+            #e7effc 0);
+}
+
+.subject-ring--purple {
+    background: conic-gradient($color-purple var(--progress),
+            #efeaff 0);
+}
+
+.subject-ring--orange {
+    background: conic-gradient($color-orange var(--progress),
+            #fff0e3 0);
+}
+
+@media (max-width: 860px) {
+    .student-header__nav span {
+        display: none;
+    }
+
+    .game-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .subject-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .challenge-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .student-header {
+        gap: 0.7rem;
+        padding: 0.7rem 1rem;
+    }
+
+    .student-brand {
+        font-size: 1.35rem;
+    }
+
+    .student-brand__mark {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .student-header__nav {
+        gap: 0.1rem;
+
+        a {
+            padding: 0.55rem;
+        }
+    }
+
+    .coin-balance {
+        display: none;
+    }
+
+    .student-dashboard {
+        width: min(100% - 1.25rem, 1200px);
+        padding-top: 1rem;
+    }
+
+    .student-welcome {
+        padding: 1.5rem;
+    }
+
+    .student-welcome__mascot {
+        margin-right: -0.8rem;
+        font-size: 4rem;
+    }
+
+    .student-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .game-grid,
+    .subject-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .game-card {
+        min-height: 215px;
+        padding: 1rem;
+    }
+
+    .game-card__icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.45rem;
+    }
+
+    .game-card h3 {
+        font-size: 1.1rem;
+    }
+
+    .section-heading {
+        align-items: center;
+
+        h2 {
+            font-size: 1.18rem;
+        }
+    }
+}

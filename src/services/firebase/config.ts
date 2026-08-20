@@ -1,16 +1,28 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+
 import {
-    getFirestore,
+    connectAuthEmulator,
+    getAuth,
+} from 'firebase/auth';
+
+import {
     connectFirestoreEmulator,
+    getFirestore,
 } from 'firebase/firestore';
+
+import {
+    connectFunctionsEmulator,
+    getFunctions,
+} from 'firebase/functions';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    storageBucket:
+        import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId:
+        import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
@@ -22,6 +34,9 @@ export const firebaseAuth =
 
 export const firestoreDb =
     getFirestore(firebaseApp);
+
+export const firebaseFunctions =
+    getFunctions(firebaseApp);
 
 if (import.meta.env.DEV) {
     try {
@@ -45,6 +60,19 @@ if (import.meta.env.DEV) {
     } catch (error) {
         console.warn(
             'Firestore Emulator ya estaba conectado.',
+            error,
+        );
+    }
+
+    try {
+        connectFunctionsEmulator(
+            firebaseFunctions,
+            '127.0.0.1',
+            5001,
+        );
+    } catch (error) {
+        console.warn(
+            'Firebase Functions Emulator ya estaba conectado.',
             error,
         );
     }
