@@ -48,12 +48,13 @@ function StudentDashboard() {
         useState<GamificationProfile | null>(null);
 
     const [profileLoading, setProfileLoading] = useState(true);
-
     useEffect(() => {
         if (!user) {
             setProfileLoading(false);
             return;
         }
+
+        const studentId = user.uid;
 
         let isMounted = true;
 
@@ -61,17 +62,17 @@ function StudentDashboard() {
             try {
                 let profileData =
                     await getGamificationProfileByStudentId(
-                        user.uid,
+                        studentId,
                     );
 
                 if (!profileData) {
                     await initializeGamificationProfile(
-                        user.uid,
+                        studentId,
                     );
 
                     profileData =
                         await getGamificationProfileByStudentId(
-                            user.uid,
+                            studentId,
                         );
                 }
 

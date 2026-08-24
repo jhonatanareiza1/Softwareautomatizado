@@ -7,3 +7,4 @@ export * from './family.types';
 export * from './group.types';
 export * from './invitation.types';
 export * from './gamification.types';
+export * from "./activity.types";
