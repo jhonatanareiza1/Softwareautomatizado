@@ -11,6 +11,8 @@ import Register from '../pages/Register/Register';
 import Dashboard from '../pages/Dashboard/Dashboard';
 
 import StudentDashboard from '../pages/Student/StudentDashboard';
+import ActivityPlayer from '../pages/Student/ActivityPlayer';
+
 import ParentDashboard from '../pages/Parent/ParentDashboard';
 import TeacherDashboard from '../pages/Teacher/TeacherDashboard';
 
@@ -47,6 +49,11 @@ function AppRouter() {
                         <Route
                             path="/student"
                             element={<StudentDashboard />}
+                        />
+
+                        <Route
+                            path="/student/activity/:activityId"
+                            element={<ActivityPlayer />}
                         />
                     </Route>
 
