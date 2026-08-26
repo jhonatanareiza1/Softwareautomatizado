@@ -716,9 +716,10 @@ match /topics/{topicId} {
 
       allow read: if isAuthenticated()
         && (
-          resource.data.studentId == request.auth.uid
+          progressId == request.auth.uid
           || (
-            resource.data.groupId != null
+            resource.data != null
+            && resource.data.groupId != null
             && isGroupTeacher(resource.data.groupId)
           )
         );
@@ -731,7 +732,6 @@ match /topics/{topicId} {
 
       allow delete: if false;
     }
-
     // ============================================================
     // GRADES
     // ============================================================

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import {
     useEffect,
     useState,
@@ -146,6 +147,10 @@ function ActivityPlayer() {
             return;
         }
 
+        if (submitting) {
+            return;
+        }
+
         const unansweredQuestions =
             config.questions.filter(
                 (question) =>
@@ -249,7 +254,8 @@ function ActivityPlayer() {
 
                     <div>
                         <strong>
-                            {result.score} / 10
+                            {result.score} /{' '}
+                            {result.totalPoints}
                         </strong>
                     </div>
 
@@ -258,6 +264,59 @@ function ActivityPlayer() {
                         {result.correctAnswers} de{' '}
                         {result.totalQuestions}
                     </p>
+
+                    <p>
+                        Resultado:{' '}
+                        {result.passed
+                            ? 'Aprobada'
+                            : 'No aprobada'}
+                    </p>
+
+                    <div>
+                        <p>
+                            XP ganada:{' '}
+                            <strong>
+                                {
+                                    result
+                                        .gamification
+                                        .xp
+                                }
+                            </strong>
+                        </p>
+
+                        <p>
+                            EduCoins ganadas:{' '}
+                            <strong>
+                                {
+                                    result
+                                        .gamification
+                                        .coins
+                                }
+                            </strong>
+                        </p>
+
+                        <p>
+                            XP total:{' '}
+                            <strong>
+                                {
+                                    result
+                                        .gamification
+                                        .totalXP
+                                }
+                            </strong>
+                        </p>
+
+                        <p>
+                            EduCoins totales:{' '}
+                            <strong>
+                                {
+                                    result
+                                        .gamification
+                                        .totalCoins
+                                }
+                            </strong>
+                        </p>
+                    </div>
 
                     <p>
                         {result.passed
@@ -387,4 +446,4 @@ function ActivityPlayer() {
     );
 }
 
-export default ActivityPlayer;  
+export default ActivityPlayer;

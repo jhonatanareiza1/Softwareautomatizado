@@ -28,18 +28,33 @@ interface SubmitAttemptData {
     answers: Record<string, string | string[]>;
 }
 
+interface SubmitAttemptGamification {
+    scorePercentage: number;
+    xp: number;
+    totalXP: number;
+    coins: number;
+    totalCoins: number;
+    rewarded: boolean;
+}
+
 export interface SubmitAttemptResult {
     success: boolean;
     attemptId: string;
+
     activity: {
         id: string;
         title: string;
     };
+
     score: number;
     totalPoints: number;
+
     correctAnswers: number;
     totalQuestions: number;
+
     passed: boolean;
+
+    gamification: SubmitAttemptGamification;
 }
 
 export async function getActivity(
