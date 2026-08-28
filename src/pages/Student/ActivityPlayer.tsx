@@ -1,10 +1,12 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+
 import {
     useEffect,
     useState,
 } from 'react';
 
 import {
+    useLocation,
     useNavigate,
     useParams,
 } from 'react-router-dom';
@@ -27,37 +29,99 @@ interface SelectedAnswers {
 }
 
 function ActivityPlayer() {
-    const { activityId } = useParams<{
+    const {
+        activityId,
+    } = useParams<{
         activityId: string;
     }>();
 
+    const location = useLocation();
+
     const navigate = useNavigate();
 
-    const { user } = useAuth();
+    const {
+        user,
+        profile,
+    } = useAuth();
 
-    const [activity, setActivity] =
-        useState<Activity | null>(null);
+    console.log(
+        '[ActivityPlayer] RENDER',
+    );
 
-    const [config, setConfig] =
-        useState<ActivityConfig | null>(null);
+    console.log(
+        '[ActivityPlayer] pathname:',
+        location.pathname,
+    );
 
-    const [answers, setAnswers] =
-        useState<SelectedAnswers>({});
+    console.log(
+        '[ActivityPlayer] activityId:',
+        activityId,
+    );
 
-    const [loading, setLoading] =
-        useState(true);
+    console.log(
+        '[ActivityPlayer] user:',
+        user?.uid,
+    );
 
-    const [submitting, setSubmitting] =
-        useState(false);
+    console.log(
+        '[ActivityPlayer] profile:',
+        profile,
+    );
 
-    const [error, setError] =
-        useState<string | null>(null);
+    const [
+        activity,
+        setActivity,
+    ] = useState<Activity | null>(
+        null,
+    );
 
-    const [result, setResult] =
-        useState<SubmitAttemptResult | null>(null);
+    const [
+        config,
+        setConfig,
+    ] = useState<ActivityConfig | null>(
+        null,
+    );
+
+    const [
+        answers,
+        setAnswers,
+    ] = useState<SelectedAnswers>({});
+
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
+
+    const [
+        submitting,
+        setSubmitting,
+    ] = useState(false);
+
+    const [
+        error,
+        setError,
+    ] = useState<string | null>(
+        null,
+    );
+
+    const [
+        result,
+        setResult,
+    ] = useState<SubmitAttemptResult | null>(
+        null,
+    );
 
     useEffect(() => {
+        console.log(
+            '[ActivityPlayer] useEffect activityId:',
+            activityId,
+        );
+
         if (!activityId) {
+            console.error(
+                '[ActivityPlayer] NO activityId',
+            );
+
             setError(
                 'No se especificó una actividad.',
             );
@@ -67,11 +131,17 @@ function ActivityPlayer() {
             return;
         }
 
-        const currentActivityId = activityId;
+        const currentActivityId =
+            activityId;
 
         let isMounted = true;
 
         async function loadActivity() {
+            console.log(
+                '[ActivityPlayer] Cargando actividad:',
+                currentActivityId,
+            );
+
             try {
                 setLoading(true);
                 setError(null);
@@ -81,15 +151,25 @@ function ActivityPlayer() {
                         currentActivityId,
                     );
 
+                console.log(
+                    '[ActivityPlayer] getActivity OK:',
+                    data,
+                );
+
                 if (!isMounted) {
                     return;
                 }
 
-                setActivity(data.activity);
-                setConfig(data.config);
+                setActivity(
+                    data.activity,
+                );
+
+                setConfig(
+                    data.config,
+                );
             } catch (loadError) {
                 console.error(
-                    'No se pudo cargar la actividad:',
+                    '[ActivityPlayer] ERROR getActivity:',
                     loadError,
                 );
 
@@ -108,6 +188,11 @@ function ActivityPlayer() {
         void loadActivity();
 
         return () => {
+            console.log(
+                '[ActivityPlayer] desmontando:',
+                currentActivityId,
+            );
+
             isMounted = false;
         };
     }, [activityId]);
@@ -116,13 +201,19 @@ function ActivityPlayer() {
         questionId: string,
         answer: string,
     ) {
-        setAnswers((current) => ({
-            ...current,
-            [questionId]: answer,
-        }));
+        setAnswers(
+            (current) => ({
+                ...current,
+                [questionId]: answer,
+            }),
+        );
     }
 
     async function handleSubmit() {
+        console.log(
+            '[ActivityPlayer] Enviando actividad',
+        );
+
         if (!activityId) {
             setError(
                 'No se especificó una actividad.',
@@ -154,10 +245,13 @@ function ActivityPlayer() {
         const unansweredQuestions =
             config.questions.filter(
                 (question) =>
-                    answers[question.id] === undefined,
+                    answers[question.id] ===
+                    undefined,
             );
 
-        if (unansweredQuestions.length > 0) {
+        if (
+            unansweredQuestions.length > 0
+        ) {
             setError(
                 'Debes responder todas las preguntas antes de enviar.',
             );
@@ -176,10 +270,15 @@ function ActivityPlayer() {
                     answers,
                 });
 
+            console.log(
+                '[ActivityPlayer] submitAttempt OK:',
+                response,
+            );
+
             setResult(response);
         } catch (submitError) {
             console.error(
-                'No se pudo enviar el intento:',
+                '[ActivityPlayer] ERROR submitAttempt:',
                 submitError,
             );
 
@@ -207,6 +306,7 @@ function ActivityPlayer() {
         return (
             <main className="student-dashboard">
                 <section className="student-panel">
+
                     <h1>
                         No se pudo cargar la actividad
                     </h1>
@@ -223,6 +323,7 @@ function ActivityPlayer() {
                     >
                         Volver al inicio
                     </button>
+
                 </section>
             </main>
         );
@@ -244,6 +345,7 @@ function ActivityPlayer() {
         return (
             <main className="student-dashboard">
                 <section className="student-panel">
+
                     <p className="eyebrow">
                         ACTIVIDAD COMPLETADA
                     </p>
@@ -254,14 +356,16 @@ function ActivityPlayer() {
 
                     <div>
                         <strong>
-                            {result.score} /{' '}
+                            {result.score}
+                            {' / '}
                             {result.totalPoints}
                         </strong>
                     </div>
 
                     <p>
                         Respuestas correctas:{' '}
-                        {result.correctAnswers} de{' '}
+                        {result.correctAnswers}
+                        {' de '}
                         {result.totalQuestions}
                     </p>
 
@@ -273,6 +377,7 @@ function ActivityPlayer() {
                     </p>
 
                     <div>
+
                         <p>
                             XP ganada:{' '}
                             <strong>
@@ -316,6 +421,7 @@ function ActivityPlayer() {
                                 }
                             </strong>
                         </p>
+
                     </div>
 
                     <p>
@@ -332,6 +438,7 @@ function ActivityPlayer() {
                     >
                         Volver al inicio
                     </button>
+
                 </section>
             </main>
         );
@@ -340,6 +447,7 @@ function ActivityPlayer() {
     return (
         <main className="student-dashboard">
             <section className="student-panel">
+
                 <button
                     type="button"
                     onClick={() =>
@@ -351,6 +459,7 @@ function ActivityPlayer() {
 
                 <div className="section-heading">
                     <div>
+
                         <p className="eyebrow">
                             ACTIVIDAD
                         </p>
@@ -364,6 +473,7 @@ function ActivityPlayer() {
                                 {activity.description}
                             </p>
                         )}
+
                     </div>
                 </div>
 
@@ -374,14 +484,22 @@ function ActivityPlayer() {
                 )}
 
                 <div>
+
                     {config.questions.map(
-                        (question, index) => (
+                        (
+                            question,
+                            index,
+                        ) => (
                             <article
-                                key={question.id}
+                                key={
+                                    question.id
+                                }
                                 className="student-panel"
                             >
+
                                 <p>
-                                    Pregunta {index + 1}
+                                    Pregunta{' '}
+                                    {index + 1}
                                 </p>
 
                                 <h2>
@@ -389,12 +507,15 @@ function ActivityPlayer() {
                                 </h2>
 
                                 {question.options?.map(
-                                    (option) => (
+                                    (
+                                        option,
+                                    ) => (
                                         <label
                                             key={
                                                 option.id
                                             }
                                         >
+
                                             <input
                                                 type="radio"
                                                 name={
@@ -422,12 +543,15 @@ function ActivityPlayer() {
                                             {
                                                 option.text
                                             }
+
                                         </label>
                                     ),
                                 )}
+
                             </article>
                         ),
                     )}
+
                 </div>
 
                 <button
@@ -441,6 +565,7 @@ function ActivityPlayer() {
                         ? 'Enviando...'
                         : 'Enviar actividad'}
                 </button>
+
             </section>
         </main>
     );

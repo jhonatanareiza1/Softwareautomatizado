@@ -10,6 +10,8 @@ import {
 import type {
     Activity,
     ActivityConfig,
+    ActivityType,
+    QuestionType,
 } from '../../types';
 
 interface GetActivityData {
@@ -21,10 +23,46 @@ interface GetActivityResult {
     config: ActivityConfig;
 }
 
+interface CreateActivityOption {
+    id: string;
+    text: string;
+}
+
+interface CreateActivityQuestion {
+    id?: string;
+    type: QuestionType;
+    text: string;
+    options?: CreateActivityOption[];
+    points?: number;
+    correctAnswer: string | string[];
+    explanation?: string;
+}
+
+export interface CreateActivityData {
+    title: string;
+    description?: string;
+    type: ActivityType;
+    subjectId: string;
+    topicId?: string;
+    questions: CreateActivityQuestion[];
+    timeLimitSeconds?: number;
+    shuffleQuestions?: boolean;
+    shuffleOptions?: boolean;
+    passingScore?: number;
+    isPublished?: boolean;
+}
+
+export interface CreateActivityResult {
+    activityId: string;
+    configId: string;
+    isPublished: boolean;
+}
+
 interface SubmitAttemptData {
     activityId: string;
     studentId: string;
     groupId?: string;
+    attemptId?: string;
     answers: Record<string, string | string[]>;
 }
 
@@ -55,6 +93,24 @@ export interface SubmitAttemptResult {
     passed: boolean;
 
     gamification: SubmitAttemptGamification;
+}
+
+export async function createActivity(
+    data: CreateActivityData,
+): Promise<CreateActivityResult> {
+    const createActivityCallable = httpsCallable<
+        CreateActivityData,
+        CreateActivityResult
+    >(
+        firebaseFunctions,
+        'createActivity',
+    );
+
+    const result: HttpsCallableResult<
+        CreateActivityResult
+    > = await createActivityCallable(data);
+
+    return result.data;
 }
 
 export async function getActivity(

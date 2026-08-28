@@ -5,6 +5,10 @@ import {
     type CSSProperties,
 } from 'react';
 
+import {
+    useNavigate,
+} from 'react-router-dom';
+
 import { useAuth } from '../../features/auth/context/AuthContext';
 
 import {
@@ -121,6 +125,8 @@ function StudentDashboard() {
         user,
         logout,
     } = useAuth();
+
+    const navigate = useNavigate();
 
     const [
         gamificationProfile,
@@ -293,6 +299,25 @@ function StudentDashboard() {
         };
     }, []);
 
+    function handlePlayActivity(
+        activityId: string,
+    ) {
+        console.log(
+            '[StudentDashboard] Abriendo actividad:',
+            activityId,
+        );
+
+        const targetPath =
+            `/student/activity/${activityId}`;
+
+        console.log(
+            '[StudentDashboard] Ruta:',
+            targetPath,
+        );
+
+        navigate(targetPath);
+    }
+
     const studentName =
         profile?.displayName
             ?.split(' ')[0]
@@ -379,92 +404,93 @@ function StudentDashboard() {
     );
 
     const overallProgress =
-        useMemo(() => {
-            const subjects =
-                subjectProgress.filter(
-                    (subject) =>
-                        subject.totalPoints > 0,
-                );
+        useMemo(
+            () => {
+                const subjects =
+                    subjectProgress.filter(
+                        (subject) =>
+                            subject.totalPoints > 0,
+                    );
 
-            if (subjects.length === 0) {
-                return {
-                    percentage: 0,
-                    activitiesCompleted: 0,
-                    passedActivities: 0,
-                    totalScore: 0,
-                    totalPoints: 0,
-                };
-            }
+                if (subjects.length === 0) {
+                    return {
+                        percentage: 0,
+                        activitiesCompleted: 0,
+                        passedActivities: 0,
+                        totalScore: 0,
+                        totalPoints: 0,
+                    };
+                }
 
-            const totalScore =
-                subjects.reduce(
-                    (
-                        total,
-                        subject,
-                    ) =>
-                        total +
-                        subject.totalScore,
-                    0,
-                );
-
-            const totalPoints =
-                subjects.reduce(
-                    (
-                        total,
-                        subject,
-                    ) =>
-                        total +
-                        subject.totalPoints,
-                    0,
-                );
-
-            const activitiesCompleted =
-                subjects.reduce(
-                    (
-                        total,
-                        subject,
-                    ) =>
-                        total +
-                        subject.activitiesCompleted,
-                    0,
-                );
-
-            const passedActivities =
-                subjects.reduce(
-                    (
-                        total,
-                        subject,
-                    ) =>
-                        total +
-                        subject.passedActivities,
-                    0,
-                );
-
-            const percentage =
-                totalPoints > 0
-                    ? Math.round(
+                const totalScore =
+                    subjects.reduce(
                         (
-                            totalScore /
-                            totalPoints
-                        ) * 100,
-                    )
-                    : 0;
+                            total,
+                            subject,
+                        ) =>
+                            total +
+                            subject.totalScore,
+                        0,
+                    );
 
-            return {
-                percentage:
-                    clampPercentage(
-                        percentage,
-                    ),
+                const totalPoints =
+                    subjects.reduce(
+                        (
+                            total,
+                            subject,
+                        ) =>
+                            total +
+                            subject.totalPoints,
+                        0,
+                    );
 
-                activitiesCompleted,
+                const activitiesCompleted =
+                    subjects.reduce(
+                        (
+                            total,
+                            subject,
+                        ) =>
+                            total +
+                            subject.activitiesCompleted,
+                        0,
+                    );
 
-                passedActivities,
+                const passedActivities =
+                    subjects.reduce(
+                        (
+                            total,
+                            subject,
+                        ) =>
+                            total +
+                            subject.passedActivities,
+                        0,
+                    );
 
-                totalScore,
+                const percentage =
+                    totalPoints > 0
+                        ? Math.round(
+                            (
+                                totalScore /
+                                totalPoints
+                            ) * 100,
+                        )
+                        : 0;
 
-                totalPoints,
-            };
-        },
+                return {
+                    percentage:
+                        clampPercentage(
+                            percentage,
+                        ),
+
+                    activitiesCompleted,
+
+                    passedActivities,
+
+                    totalScore,
+
+                    totalPoints,
+                };
+            },
             [subjectProgress],
         );
 
@@ -787,8 +813,8 @@ function StudentDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    window.location.assign(
-                                                        `/student/activity/${activity.id}`,
+                                                    handlePlayActivity(
+                                                        activity.id,
                                                     )
                                                 }
                                             >
@@ -1018,7 +1044,7 @@ function StudentDashboard() {
                                                 subject.activitiesCompleted
                                             }{' '}
                                             actividades
-                                            ·{' '}
+                                            {' · '}
                                             {
                                                 subject.passedActivities
                                             }{' '}

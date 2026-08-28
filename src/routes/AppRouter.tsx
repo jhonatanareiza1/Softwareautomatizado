@@ -7,7 +7,6 @@ import {
 
 import Login from '../pages/Login/Login';
 import Register from '../pages/Register/Register';
-
 import Dashboard from '../pages/Dashboard/Dashboard';
 
 import StudentDashboard from '../pages/Student/StudentDashboard';
@@ -23,6 +22,7 @@ function AppRouter() {
     return (
         <BrowserRouter>
             <Routes>
+
                 <Route
                     path="/login"
                     element={<Login />}
@@ -34,6 +34,7 @@ function AppRouter() {
                 />
 
                 <Route element={<ProtectedRoute />}>
+
                     <Route
                         path="/dashboard"
                         element={<Dashboard />}
@@ -50,7 +51,15 @@ function AppRouter() {
                             path="/student"
                             element={<StudentDashboard />}
                         />
+                    </Route>
 
+                    <Route
+                        element={
+                            <RoleRoute
+                                allowedRoles={['student']}
+                            />
+                        }
+                    >
                         <Route
                             path="/student/activity/:activityId"
                             element={<ActivityPlayer />}
@@ -82,6 +91,7 @@ function AppRouter() {
                             element={<TeacherDashboard />}
                         />
                     </Route>
+
                 </Route>
 
                 <Route
@@ -93,6 +103,7 @@ function AppRouter() {
                         />
                     }
                 />
+
             </Routes>
         </BrowserRouter>
     );
