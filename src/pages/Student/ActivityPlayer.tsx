@@ -1,12 +1,9 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import {
     useEffect,
     useState,
 } from 'react';
 
 import {
-    useLocation,
     useNavigate,
     useParams,
 } from 'react-router-dom';
@@ -35,38 +32,11 @@ function ActivityPlayer() {
         activityId: string;
     }>();
 
-    const location = useLocation();
-
     const navigate = useNavigate();
 
     const {
         user,
-        profile,
     } = useAuth();
-
-    console.log(
-        '[ActivityPlayer] RENDER',
-    );
-
-    console.log(
-        '[ActivityPlayer] pathname:',
-        location.pathname,
-    );
-
-    console.log(
-        '[ActivityPlayer] activityId:',
-        activityId,
-    );
-
-    console.log(
-        '[ActivityPlayer] user:',
-        user?.uid,
-    );
-
-    console.log(
-        '[ActivityPlayer] profile:',
-        profile,
-    );
 
     const [
         activity,
@@ -112,22 +82,11 @@ function ActivityPlayer() {
     );
 
     useEffect(() => {
-        console.log(
-            '[ActivityPlayer] useEffect activityId:',
-            activityId,
-        );
-
         if (!activityId) {
-            console.error(
-                '[ActivityPlayer] NO activityId',
-            );
-
             setError(
                 'No se especificó una actividad.',
             );
-
             setLoading(false);
-
             return;
         }
 
@@ -137,11 +96,6 @@ function ActivityPlayer() {
         let isMounted = true;
 
         async function loadActivity() {
-            console.log(
-                '[ActivityPlayer] Cargando actividad:',
-                currentActivityId,
-            );
-
             try {
                 setLoading(true);
                 setError(null);
@@ -150,11 +104,6 @@ function ActivityPlayer() {
                     await getActivity(
                         currentActivityId,
                     );
-
-                console.log(
-                    '[ActivityPlayer] getActivity OK:',
-                    data,
-                );
 
                 if (!isMounted) {
                     return;
@@ -169,7 +118,7 @@ function ActivityPlayer() {
                 );
             } catch (loadError) {
                 console.error(
-                    '[ActivityPlayer] ERROR getActivity:',
+                    '[ActivityPlayer] Error cargando actividad:',
                     loadError,
                 );
 
@@ -188,11 +137,6 @@ function ActivityPlayer() {
         void loadActivity();
 
         return () => {
-            console.log(
-                '[ActivityPlayer] desmontando:',
-                currentActivityId,
-            );
-
             isMounted = false;
         };
     }, [activityId]);
@@ -210,15 +154,10 @@ function ActivityPlayer() {
     }
 
     async function handleSubmit() {
-        console.log(
-            '[ActivityPlayer] Enviando actividad',
-        );
-
         if (!activityId) {
             setError(
                 'No se especificó una actividad.',
             );
-
             return;
         }
 
@@ -226,7 +165,6 @@ function ActivityPlayer() {
             setError(
                 'Debes iniciar sesión para enviar la actividad.',
             );
-
             return;
         }
 
@@ -234,28 +172,54 @@ function ActivityPlayer() {
             setError(
                 'La configuración de la actividad no está disponible.',
             );
-
             return;
         }
 
-        if (submitting) {
+        if (
+            submitting ||
+            result
+        ) {
             return;
         }
 
         const unansweredQuestions =
             config.questions.filter(
-                (question) =>
-                    answers[question.id] ===
-                    undefined,
+                (question) => {
+                    const answer =
+                        answers[
+                        question.id
+                        ];
+
+                    if (
+                        answer ===
+                        undefined
+                    ) {
+                        return true;
+                    }
+
+                    if (
+                        typeof answer ===
+                        'string'
+                    ) {
+                        return (
+                            answer.trim()
+                                .length === 0
+                        );
+                    }
+
+                    return (
+                        answer.length === 0
+                    );
+                },
             );
 
         if (
-            unansweredQuestions.length > 0
+            unansweredQuestions.length >
+            0
         ) {
             setError(
                 'Debes responder todas las preguntas antes de enviar.',
             );
-
             return;
         }
 
@@ -266,19 +230,17 @@ function ActivityPlayer() {
             const response =
                 await submitAttempt({
                     activityId,
-                    studentId: user.uid,
+                    studentId:
+                        user.uid,
                     answers,
                 });
 
-            console.log(
-                '[ActivityPlayer] submitAttempt OK:',
+            setResult(
                 response,
             );
-
-            setResult(response);
         } catch (submitError) {
             console.error(
-                '[ActivityPlayer] ERROR submitAttempt:',
+                '[ActivityPlayer] Error enviando actividad:',
                 submitError,
             );
 
@@ -306,7 +268,6 @@ function ActivityPlayer() {
         return (
             <main className="student-dashboard">
                 <section className="student-panel">
-
                     <h1>
                         No se pudo cargar la actividad
                     </h1>
@@ -318,24 +279,39 @@ function ActivityPlayer() {
                     <button
                         type="button"
                         onClick={() =>
-                            navigate('/student')
+                            navigate(
+                                '/student',
+                            )
                         }
                     >
                         Volver al inicio
                     </button>
-
                 </section>
             </main>
         );
     }
 
-    if (!activity || !config) {
+    if (
+        !activity ||
+        !config
+    ) {
         return (
             <main className="student-dashboard">
                 <section className="student-panel">
                     <p>
                         La actividad no está disponible.
                     </p>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                '/student',
+                            )
+                        }
+                    >
+                        Volver al inicio
+                    </button>
                 </section>
             </main>
         );
@@ -345,7 +321,6 @@ function ActivityPlayer() {
         return (
             <main className="student-dashboard">
                 <section className="student-panel">
-
                     <p className="eyebrow">
                         ACTIVIDAD COMPLETADA
                     </p>
@@ -358,15 +333,21 @@ function ActivityPlayer() {
                         <strong>
                             {result.score}
                             {' / '}
-                            {result.totalPoints}
+                            {
+                                result.totalPoints
+                            }
                         </strong>
                     </div>
 
                     <p>
                         Respuestas correctas:{' '}
-                        {result.correctAnswers}
+                        {
+                            result.correctAnswers
+                        }
                         {' de '}
-                        {result.totalQuestions}
+                        {
+                            result.totalQuestions
+                        }
                     </p>
 
                     <p>
@@ -377,7 +358,6 @@ function ActivityPlayer() {
                     </p>
 
                     <div>
-
                         <p>
                             XP ganada:{' '}
                             <strong>
@@ -421,7 +401,6 @@ function ActivityPlayer() {
                                 }
                             </strong>
                         </p>
-
                     </div>
 
                     <p>
@@ -433,12 +412,13 @@ function ActivityPlayer() {
                     <button
                         type="button"
                         onClick={() =>
-                            navigate('/student')
+                            navigate(
+                                '/student',
+                            )
                         }
                     >
                         Volver al inicio
                     </button>
-
                 </section>
             </main>
         );
@@ -447,11 +427,12 @@ function ActivityPlayer() {
     return (
         <main className="student-dashboard">
             <section className="student-panel">
-
                 <button
                     type="button"
                     onClick={() =>
-                        navigate('/student')
+                        navigate(
+                            '/student',
+                        )
                     }
                 >
                     ← Volver
@@ -459,7 +440,6 @@ function ActivityPlayer() {
 
                 <div className="section-heading">
                     <div>
-
                         <p className="eyebrow">
                             ACTIVIDAD
                         </p>
@@ -470,10 +450,11 @@ function ActivityPlayer() {
 
                         {activity.description && (
                             <p>
-                                {activity.description}
+                                {
+                                    activity.description
+                                }
                             </p>
                         )}
-
                     </div>
                 </div>
 
@@ -484,7 +465,6 @@ function ActivityPlayer() {
                 )}
 
                 <div>
-
                     {config.questions.map(
                         (
                             question,
@@ -496,67 +476,114 @@ function ActivityPlayer() {
                                 }
                                 className="student-panel"
                             >
-
                                 <p>
                                     Pregunta{' '}
                                     {index + 1}
                                 </p>
 
                                 <h2>
-                                    {question.text}
+                                    {
+                                        question.text
+                                    }
                                 </h2>
 
-                                {question.options?.map(
-                                    (
-                                        option,
-                                    ) => (
+                                {question.type ===
+                                    'text' ? (
+                                    <div>
                                         <label
-                                            key={
-                                                option.id
+                                            htmlFor={
+                                                `answer-${question.id}`
                                             }
                                         >
-
-                                            <input
-                                                type="radio"
-                                                name={
-                                                    question.id
-                                                }
-                                                value={
-                                                    option.id
-                                                }
-                                                checked={
-                                                    answers[
-                                                    question.id
-                                                    ] ===
-                                                    option.id
-                                                }
-                                                onChange={() =>
-                                                    handleAnswerChange(
-                                                        question.id,
-                                                        option.id,
-                                                    )
-                                                }
-                                            />
-
-                                            {' '}
-
-                                            {
-                                                option.text
-                                            }
-
+                                            Escribe tu respuesta
                                         </label>
-                                    ),
-                                )}
 
+                                        <textarea
+                                            id={
+                                                `answer-${question.id}`
+                                            }
+                                            value={
+                                                typeof answers[
+                                                    question.id
+                                                ] ===
+                                                    'string'
+                                                    ? answers[
+                                                    question.id
+                                                    ] as string
+                                                    : ''
+                                            }
+                                            onChange={(
+                                                event,
+                                            ) =>
+                                                handleAnswerChange(
+                                                    question.id,
+                                                    event
+                                                        .target
+                                                        .value,
+                                                )
+                                            }
+                                            rows={4}
+                                            disabled={
+                                                submitting
+                                            }
+                                        />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        {question.options?.map(
+                                            (
+                                                option,
+                                            ) => (
+                                                <label
+                                                    key={
+                                                        option.id
+                                                    }
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name={
+                                                            question.id
+                                                        }
+                                                        value={
+                                                            option.id
+                                                        }
+                                                        checked={
+                                                            answers[
+                                                            question.id
+                                                            ] ===
+                                                            option.id
+                                                        }
+                                                        onChange={() =>
+                                                            handleAnswerChange(
+                                                                question.id,
+                                                                option.id,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            submitting
+                                                        }
+                                                    />
+
+                                                    {' '}
+
+                                                    {
+                                                        option.text
+                                                    }
+                                                </label>
+                                            ),
+                                        )}
+                                    </div>
+                                )}
                             </article>
                         ),
                     )}
-
                 </div>
 
                 <button
                     type="button"
-                    disabled={submitting}
+                    disabled={
+                        submitting
+                    }
                     onClick={() =>
                         void handleSubmit()
                     }
@@ -565,7 +592,6 @@ function ActivityPlayer() {
                         ? 'Enviando...'
                         : 'Enviar actividad'}
                 </button>
-
             </section>
         </main>
     );

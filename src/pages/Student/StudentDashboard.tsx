@@ -25,6 +25,11 @@ import {
     type StudentActivity,
 } from '../../services/firebase/activitiesList';
 
+import {
+    listActivityAttempts,
+    type ActivityAttempt,
+} from '../../services/firebase/activities';
+
 import type {
     GamificationProfile,
     ProgressSubjectKey,
@@ -119,6 +124,68 @@ function clampPercentage(
     );
 }
 
+function getAttemptDate(
+    attempt: ActivityAttempt,
+): Date | null {
+    const value = attempt.createdAt;
+
+    if (!value) {
+        return null;
+    }
+
+    if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toDate' in value &&
+        typeof value.toDate === 'function'
+    ) {
+        return value.toDate();
+    }
+
+    if (
+        typeof value === 'object' &&
+        value !== null &&
+        'seconds' in value &&
+        typeof value.seconds === 'number'
+    ) {
+        return new Date(
+            value.seconds * 1000,
+        );
+    }
+
+    if (
+        typeof value === 'string' ||
+        typeof value === 'number'
+    ) {
+        const date = new Date(value);
+
+        if (!Number.isNaN(date.getTime())) {
+            return date;
+        }
+    }
+
+    return null;
+}
+
+function isToday(
+    date: Date | null,
+): boolean {
+    if (!date) {
+        return false;
+    }
+
+    const today = new Date();
+
+    return (
+        date.getFullYear() ===
+        today.getFullYear() &&
+        date.getMonth() ===
+        today.getMonth() &&
+        date.getDate() ===
+        today.getDate()
+    );
+}
+
 function StudentDashboard() {
     const {
         profile,
@@ -148,6 +215,13 @@ function StudentDashboard() {
     ] = useState<StudentActivity[]>([]);
 
     const [
+        attemptsByActivity,
+        setAttemptsByActivity,
+    ] = useState<Record<string, ActivityAttempt[]>>(
+        {},
+    );
+
+    const [
         profileLoading,
         setProfileLoading,
     ] = useState(true);
@@ -160,6 +234,11 @@ function StudentDashboard() {
     const [
         activitiesLoading,
         setActivitiesLoading,
+    ] = useState(true);
+
+    const [
+        attemptsLoading,
+        setAttemptsLoading,
     ] = useState(true);
 
     const [
@@ -176,11 +255,17 @@ function StudentDashboard() {
         null,
     );
 
+    const [
+        attemptsError,
+        setAttemptsError,
+    ] = useState<string | null>(
+        null,
+    );
+
     useEffect(() => {
         if (!user) {
             setProfileLoading(false);
             setProgressLoading(false);
-
             return;
         }
 
@@ -201,7 +286,6 @@ function StudentDashboard() {
                     getGamificationProfileByStudentId(
                         studentId,
                     ),
-
                     getProgressByStudentId(
                         studentId,
                     ),
@@ -299,24 +383,188 @@ function StudentDashboard() {
         };
     }, []);
 
+    useEffect(() => {
+        if (
+            activitiesLoading ||
+            activities.length === 0
+        ) {
+            if (!activitiesLoading) {
+                setAttemptsLoading(false);
+            }
+
+            return;
+        }
+
+        let isMounted = true;
+
+        async function loadAttempts() {
+            try {
+                setAttemptsLoading(true);
+                setAttemptsError(null);
+
+                const results =
+                    await Promise.all(
+                        activities.map(
+                            async (activity) => {
+                                const response =
+                                    await listActivityAttempts(
+                                        activity.id,
+                                    );
+
+                                return [
+                                    activity.id,
+                                    response.attempts,
+                                ] as const;
+                            },
+                        ),
+                    );
+
+                if (!isMounted) {
+                    return;
+                }
+
+                const groupedAttempts: Record<
+                    string,
+                    ActivityAttempt[]
+                > = {};
+
+                for (
+                    const [
+                        activityId,
+                        attempts,
+                    ] of results
+                ) {
+                    groupedAttempts[
+                        activityId
+                    ] = attempts;
+                }
+
+                setAttemptsByActivity(
+                    groupedAttempts,
+                );
+            } catch (error) {
+                console.error(
+                    'No se pudieron cargar los intentos del estudiante:',
+                    error,
+                );
+
+                if (isMounted) {
+                    setAttemptsError(
+                        'No se pudieron cargar los resultados de tus actividades.',
+                    );
+                }
+            } finally {
+                if (isMounted) {
+                    setAttemptsLoading(false);
+                }
+            }
+        }
+
+        void loadAttempts();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [
+        activities,
+        activitiesLoading,
+    ]);
+
     function handlePlayActivity(
         activityId: string,
     ) {
-        console.log(
-            '[StudentDashboard] Abriendo actividad:',
-            activityId,
+        navigate(
+            `/student/activity/${activityId}`,
         );
-
-        const targetPath =
-            `/student/activity/${activityId}`;
-
-        console.log(
-            '[StudentDashboard] Ruta:',
-            targetPath,
-        );
-
-        navigate(targetPath);
     }
+
+    function getLatestAttempt(
+        activityId: string,
+    ): ActivityAttempt | null {
+        const attempts =
+            attemptsByActivity[
+            activityId
+            ];
+
+        if (
+            !attempts ||
+            attempts.length === 0
+        ) {
+            return null;
+        }
+
+        return attempts[0];
+    }
+
+    const dailyAttempts =
+        useMemo(() => {
+            return Object.values(
+                attemptsByActivity,
+            )
+                .flat()
+                .filter((attempt) =>
+                    isToday(
+                        getAttemptDate(
+                            attempt,
+                        ),
+                    ),
+                );
+        }, [attemptsByActivity]);
+
+    const dailyCorrectAnswers =
+        useMemo(() => {
+            return dailyAttempts.reduce(
+                (
+                    total,
+                    attempt,
+                ) =>
+                    total +
+                    Math.max(
+                        attempt.correctAnswers ??
+                        0,
+                        0,
+                    ),
+                0,
+            );
+        }, [dailyAttempts]);
+
+    const dailyDistinctActivities =
+        useMemo(() => {
+            return new Set(
+                dailyAttempts.map(
+                    (attempt) =>
+                        attempt.activityId,
+                ),
+            ).size;
+        }, [dailyAttempts]);
+
+    const correctAnswersChallenge =
+        Math.min(
+            dailyCorrectAnswers,
+            20,
+        );
+
+    const correctAnswersPercentage =
+        clampPercentage(
+            (
+                correctAnswersChallenge /
+                20
+            ) * 100,
+        );
+
+    const distinctActivitiesChallenge =
+        Math.min(
+            dailyDistinctActivities,
+            3,
+        );
+
+    const distinctActivitiesPercentage =
+        clampPercentage(
+            (
+                distinctActivitiesChallenge /
+                3
+            ) * 100,
+        );
 
     const studentName =
         profile?.displayName
@@ -409,10 +657,14 @@ function StudentDashboard() {
                 const subjects =
                     subjectProgress.filter(
                         (subject) =>
-                            subject.totalPoints > 0,
+                            subject.totalPoints >
+                            0,
                     );
 
-                if (subjects.length === 0) {
+                if (
+                    subjects.length ===
+                    0
+                ) {
                     return {
                         percentage: 0,
                         activitiesCompleted: 0,
@@ -481,13 +733,9 @@ function StudentDashboard() {
                         clampPercentage(
                             percentage,
                         ),
-
                     activitiesCompleted,
-
                     passedActivities,
-
                     totalScore,
-
                     totalPoints,
                 };
             },
@@ -756,9 +1004,16 @@ function StudentDashboard() {
                         </p>
                     )}
 
+                    {attemptsError && (
+                        <p role="alert">
+                            {attemptsError}
+                        </p>
+                    )}
+
                     {!activitiesLoading &&
                         !activitiesError &&
-                        activities.length === 0 && (
+                        activities.length ===
+                        0 && (
                             <p>
                                 No hay actividades
                                 disponibles
@@ -771,57 +1026,107 @@ function StudentDashboard() {
                         activities.length > 0 && (
                             <div className="game-grid">
                                 {activities.map(
-                                    (activity) => (
-                                        <article
-                                            className="game-card"
-                                            key={
-                                                activity.id
-                                            }
-                                        >
-                                            <div className="game-card__sparkle">
-                                                ✦
-                                            </div>
+                                    (activity) => {
+                                        const latestAttempt =
+                                            getLatestAttempt(
+                                                activity.id,
+                                            );
 
-                                            <div className="game-card__icon">
-                                                🎯
-                                            </div>
+                                        const hasAttempt =
+                                            latestAttempt !==
+                                            null;
 
-                                            <p>
-                                                {activity.type ??
-                                                    'Actividad'}
-                                            </p>
-
-                                            <h3>
-                                                {
-                                                    activity.title
-                                                }
-                                            </h3>
-
-                                            {activity.description && (
-                                                <p>
-                                                    {
-                                                        activity.description
-                                                    }
-                                                </p>
-                                            )}
-
-                                            <span>
-                                                Actividad
-                                                disponible
-                                            </span>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    handlePlayActivity(
-                                                        activity.id,
-                                                    )
+                                        return (
+                                            <article
+                                                className="game-card"
+                                                key={
+                                                    activity.id
                                                 }
                                             >
-                                                Jugar
-                                            </button>
-                                        </article>
-                                    ),
+                                                <div className="game-card__sparkle">
+                                                    ✦
+                                                </div>
+
+                                                <div className="game-card__icon">
+                                                    🎯
+                                                </div>
+
+                                                <p>
+                                                    {activity.type ??
+                                                        'Actividad'}
+                                                </p>
+
+                                                <h3>
+                                                    {
+                                                        activity.title
+                                                    }
+                                                </h3>
+
+                                                {activity.description && (
+                                                    <p>
+                                                        {
+                                                            activity.description
+                                                        }
+                                                    </p>
+                                                )}
+
+                                                {attemptsLoading ? (
+                                                    <span>
+                                                        Cargando resultado...
+                                                    </span>
+                                                ) : hasAttempt ? (
+                                                    <>
+                                                        <span>
+                                                            {latestAttempt.passed
+                                                                ? 'Actividad aprobada'
+                                                                : 'Actividad no aprobada'}
+                                                        </span>
+
+                                                        <p>
+                                                            Resultado:{' '}
+                                                            <strong>
+                                                                {
+                                                                    latestAttempt.score
+                                                                }
+                                                                {' / '}
+                                                                {
+                                                                    latestAttempt.totalPoints
+                                                                }
+                                                            </strong>
+                                                        </p>
+
+                                                        <p>
+                                                            Correctas:{' '}
+                                                            {
+                                                                latestAttempt.correctAnswers
+                                                            }
+                                                            {' de '}
+                                                            {
+                                                                latestAttempt.totalQuestions
+                                                            }
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <span>
+                                                        Actividad disponible
+                                                    </span>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handlePlayActivity(
+                                                            activity.id,
+                                                        )
+                                                    }
+                                                >
+                                                    {hasAttempt
+                                                        ? 'Reintentar'
+                                                        : 'Jugar'}
+                                                </button>
+                                            </article>
+                                        );
+                                    },
                                 )}
                             </div>
                         )}
@@ -873,7 +1178,9 @@ function StudentDashboard() {
                                     {game.level}
                                 </span>
 
-                                <button type="button">
+                                <button
+                                    type="button"
+                                >
                                     Jugar
                                 </button>
                             </article>
@@ -915,13 +1222,16 @@ function StudentDashboard() {
                                 </h3>
 
                                 <p>
-                                    15 / 20
+                                    {
+                                        correctAnswersChallenge
+                                    }{' '}
+                                    / 20
                                 </p>
 
                                 <div className="mini-progress">
                                     <i
                                         style={{
-                                            width: '75%',
+                                            width: `${correctAnswersPercentage}%`,
                                         }}
                                     />
                                 </div>
@@ -945,13 +1255,13 @@ function StudentDashboard() {
                                 </h3>
 
                                 <p>
-                                    10 / 15 min
+                                    Próximamente
                                 </p>
 
                                 <div className="mini-progress mini-progress--blue">
                                     <i
                                         style={{
-                                            width: '66%',
+                                            width: '0%',
                                         }}
                                     />
                                 </div>
@@ -970,18 +1280,21 @@ function StudentDashboard() {
                             <div>
                                 <h3>
                                     Completa 3
-                                    juegos
-                                    distintos
+                                    actividades
+                                    distintas
                                 </h3>
 
                                 <p>
-                                    2 / 3
+                                    {
+                                        distinctActivitiesChallenge
+                                    }{' '}
+                                    / 3
                                 </p>
 
                                 <div className="mini-progress mini-progress--orange">
                                     <i
                                         style={{
-                                            width: '66%',
+                                            width: `${distinctActivitiesPercentage}%`,
                                         }}
                                     />
                                 </div>
@@ -1056,7 +1369,7 @@ function StudentDashboard() {
                                         className={`subject-ring subject-ring--${subject.tone}`}
                                         style={{
                                             '--progress':
-                                                `${subject.percentage * 3.6}deg`,
+                                                `${subject.percentage * 3.6} deg`,
                                         } as CSSProperties}
                                     />
                                 </article>
