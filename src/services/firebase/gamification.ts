@@ -4,6 +4,7 @@ import {
     limit,
     query,
     where,
+    type Timestamp,
 } from 'firebase/firestore';
 
 import {
@@ -26,6 +27,9 @@ import type {
 const GAMIFICATION_PROFILES_COLLECTION =
     'gamificationProfiles';
 
+const STUDENT_ACHIEVEMENTS_COLLECTION =
+    'studentAchievements';
+
 interface InitializeGamificationProfileData {
     studentId: string;
 }
@@ -33,6 +37,13 @@ interface InitializeGamificationProfileData {
 interface InitializeGamificationProfileResult {
     studentId: string;
     created: boolean;
+}
+
+export interface StudentAchievement {
+    id: string;
+    studentId: string;
+    achievementId: string;
+    unlockedAt: Timestamp | null;
 }
 
 function mapSubjectProgress(
@@ -112,6 +123,35 @@ export async function getGamificationProfileByStudentId(
     );
 }
 
+export async function getStudentAchievements(
+    studentId: string,
+): Promise<StudentAchievement[]> {
+    const achievementsReference = collection(
+        firestoreDb,
+        STUDENT_ACHIEVEMENTS_COLLECTION,
+    );
+
+    const achievementsQuery = query(
+        achievementsReference,
+        where('studentId', '==', studentId),
+    );
+
+    const snapshot = await getDocs(achievementsQuery);
+
+    return snapshot.docs.map((achievementDocument) => {
+        const data = achievementDocument.data();
+
+        return {
+            id: achievementDocument.id,
+            studentId: data.studentId as string,
+            achievementId: data.achievementId as string,
+            unlockedAt:
+                (data.unlockedAt as Timestamp | null)
+                ?? null,
+        };
+    });
+}
+
 export async function initializeGamificationProfile(
     studentId: string,
 ): Promise<InitializeGamificationProfileResult> {
@@ -131,3 +171,4 @@ export async function initializeGamificationProfile(
 
     return result.data;
 }
+

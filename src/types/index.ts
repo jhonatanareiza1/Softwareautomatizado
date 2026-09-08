@@ -9,3 +9,4 @@ export * from './invitation.types';
 export * from './gamification.types';
 export * from "./activity.types";
 export * from './progress.types';
+export * from './grade.types';

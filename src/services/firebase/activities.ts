@@ -159,7 +159,10 @@ interface SubmitAttemptData {
     studentId: string;
     groupId?: string;
     attemptId?: string;
-    answers: Record<string, string | string[]>;
+    answers: Record<
+        string,
+        string | string[]
+    >;
 }
 
 interface SubmitAttemptGamification {
@@ -174,21 +177,25 @@ interface SubmitAttemptGamification {
 export interface SubmitAttemptResult {
     success: boolean;
     attemptId: string;
-
     activity: {
         id: string;
         title: string;
     };
-
     score: number;
     totalPoints: number;
-
     correctAnswers: number;
     totalQuestions: number;
-
     passed: boolean;
-
     gamification: SubmitAttemptGamification;
+}
+
+export interface ActivityAttemptAnswerResult {
+    questionId: string;
+    answer: string | string[];
+    answerText?: string | string[];
+    isCorrect: boolean;
+    pointsEarned: number;
+    pointsAvailable: number;
 }
 
 export interface ActivityAttempt {
@@ -196,16 +203,13 @@ export interface ActivityAttempt {
     studentId: string;
     activityId: string;
     groupId?: string;
-
     score: number;
     totalPoints: number;
-
     correctAnswers: number;
     totalQuestions: number;
-
     passed: boolean;
     status: string;
-
+    answerResults: ActivityAttemptAnswerResult[];
     gamification?: {
         scorePercentage?: number;
         xp?: number;
@@ -214,7 +218,6 @@ export interface ActivityAttempt {
         totalCoins?: number;
         rewarded?: boolean;
     };
-
     createdAt?: unknown;
 }
 
@@ -225,13 +228,14 @@ export interface ListActivityAttemptsResult {
 export async function createActivity(
     data: CreateActivityData,
 ): Promise<CreateActivityResult> {
-    const createActivityCallable = httpsCallable<
-        CreateActivityData,
-        CreateActivityResult
-    >(
-        firebaseFunctions,
-        'createActivity',
-    );
+    const createActivityCallable =
+        httpsCallable<
+            CreateActivityData,
+            CreateActivityResult
+        >(
+            firebaseFunctions,
+            'createActivity',
+        );
 
     const result: HttpsCallableResult<
         CreateActivityResult
@@ -243,13 +247,14 @@ export async function createActivity(
 export async function updateActivity(
     data: UpdateActivityData,
 ): Promise<UpdateActivityResult> {
-    const updateActivityCallable = httpsCallable<
-        UpdateActivityData,
-        UpdateActivityResult
-    >(
-        firebaseFunctions,
-        'updateActivity',
-    );
+    const updateActivityCallable =
+        httpsCallable<
+            UpdateActivityData,
+            UpdateActivityResult
+        >(
+            firebaseFunctions,
+            'updateActivity',
+        );
 
     const result: HttpsCallableResult<
         UpdateActivityResult
@@ -273,10 +278,9 @@ export async function listTeacherActivities(): Promise<
 
     const result: HttpsCallableResult<
         ListTeacherActivitiesResult
-    > =
-        await listTeacherActivitiesCallable(
-            undefined,
-        );
+    > = await listTeacherActivitiesCallable(
+        undefined,
+    );
 
     return result.data;
 }
@@ -295,10 +299,9 @@ export async function getTeacherActivity(
 
     const result: HttpsCallableResult<
         GetTeacherActivityResult
-    > =
-        await getTeacherActivityCallable({
-            activityId,
-        });
+    > = await getTeacherActivityCallable({
+        activityId,
+    });
 
     return result.data;
 }
@@ -306,13 +309,14 @@ export async function getTeacherActivity(
 export async function getActivity(
     activityId: string,
 ): Promise<GetActivityResult> {
-    const getActivityCallable = httpsCallable<
-        GetActivityData,
-        GetActivityResult
-    >(
-        firebaseFunctions,
-        'getActivity',
-    );
+    const getActivityCallable =
+        httpsCallable<
+            GetActivityData,
+            GetActivityResult
+        >(
+            firebaseFunctions,
+            'getActivity',
+        );
 
     const result: HttpsCallableResult<
         GetActivityResult
@@ -326,13 +330,14 @@ export async function getActivity(
 export async function submitAttempt(
     data: SubmitAttemptData,
 ): Promise<SubmitAttemptResult> {
-    const submitAttemptCallable = httpsCallable<
-        SubmitAttemptData,
-        SubmitAttemptResult
-    >(
-        firebaseFunctions,
-        'submitAttempt',
-    );
+    const submitAttemptCallable =
+        httpsCallable<
+            SubmitAttemptData,
+            SubmitAttemptResult
+        >(
+            firebaseFunctions,
+            'submitAttempt',
+        );
 
     const result: HttpsCallableResult<
         SubmitAttemptResult
@@ -355,10 +360,14 @@ export async function listActivityAttempts(
 
     const result: HttpsCallableResult<
         ListActivityAttemptsResult
-    > =
-        await listActivityAttemptsCallable({
-            activityId,
-        });
+    > = await listActivityAttemptsCallable({
+        activityId,
+    });
+
+    console.log(
+        '[listActivityAttempts] result.data:',
+        result.data,
+    );
 
     return result.data;
 }

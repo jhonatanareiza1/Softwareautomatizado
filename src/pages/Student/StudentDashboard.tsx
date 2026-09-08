@@ -13,6 +13,7 @@ import { useAuth } from '../../features/auth/context/AuthContext';
 
 import {
     getGamificationProfileByStudentId,
+    getStudentAchievements,
     initializeGamificationProfile,
 } from '../../services/firebase/gamification';
 
@@ -93,6 +94,36 @@ const subjectDefinitions: Array<{
             tone: 'orange',
         },
     ];
+
+const achievementDefinitions: Record<
+    string,
+    {
+        name: string;
+        description: string;
+        icon: string;
+    }
+> = {
+    'first-victory': {
+        name: 'Primera victoria',
+        description: 'Aprueba tu primera actividad',
+        icon: '🏆',
+    },
+    'perfect-score': {
+        name: 'Puntuación perfecta',
+        description: 'Obtén 100% en una actividad',
+        icon: '⭐',
+    },
+    'five-activities': {
+        name: 'Cinco actividades',
+        description: 'Completa 5 actividades',
+        icon: '🎯',
+    },
+    'hundred-xp': {
+        name: '100 XP',
+        description: 'Alcanza 100 XP',
+        icon: '⚡',
+    },
+};
 
 function getProgressLabel(
     percentage: number,
@@ -186,6 +217,55 @@ function isToday(
     );
 }
 
+function formatAttemptDate(
+    date: Date | null,
+): string {
+    if (!date) {
+        return 'Fecha no disponible';
+    }
+
+    return new Intl.DateTimeFormat(
+        'es-CO',
+        {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        },
+    ).format(date);
+}
+
+function getSubjectName(
+    subjectId: string | undefined,
+): string {
+    if (!subjectId) {
+        return 'Sin materia';
+    }
+
+    const subject = subjectDefinitions.find(
+        (definition) =>
+            definition.key === subjectId,
+    );
+
+    return subject?.name ?? subjectId;
+}
+
+function formatAnswer(
+    answer: string | string[],
+): string {
+    if (Array.isArray(answer)) {
+        if (answer.length === 0) {
+            return 'Sin respuesta';
+        }
+
+        return answer.join(', ');
+    }
+
+    if (answer.trim() === '') {
+        return 'Sin respuesta';
+    }
+
+    return answer;
+}
+
 function StudentDashboard() {
     const {
         profile,
@@ -201,6 +281,17 @@ function StudentDashboard() {
     ] = useState<GamificationProfile | null>(
         null,
     );
+
+    const [
+        studentAchievements,
+        setStudentAchievements,
+    ] = useState<
+        Awaited<
+            ReturnType<
+                typeof getStudentAchievements
+            >
+        >
+    >([]);
 
     const [
         studentProgress,
@@ -262,6 +353,15 @@ function StudentDashboard() {
         null,
     );
 
+    const [
+        selectedHistory,
+        setSelectedHistory,
+    ] = useState<{
+        activity: StudentActivity;
+        attempt: ActivityAttempt;
+        attemptNumber: number;
+    } | null>(null);
+
     useEffect(() => {
         if (!user) {
             setProfileLoading(false);
@@ -282,11 +382,15 @@ function StudentDashboard() {
                 const [
                     existingGamificationProfile,
                     existingProgress,
+                    existingStudentAchievements,
                 ] = await Promise.all([
                     getGamificationProfileByStudentId(
                         studentId,
                     ),
                     getProgressByStudentId(
+                        studentId,
+                    ),
+                    getStudentAchievements(
                         studentId,
                     ),
                 ]);
@@ -313,6 +417,10 @@ function StudentDashboard() {
 
                 setGamificationProfile(
                     resolvedGamificationProfile,
+                );
+
+                setStudentAchievements(
+                    existingStudentAchievements,
                 );
 
                 setStudentProgress(
@@ -496,6 +604,45 @@ function StudentDashboard() {
         return attempts[0];
     }
 
+    const historyEntries = useMemo(() => {
+        return activities
+            .flatMap((activity) => {
+                const attempts =
+                    attemptsByActivity[
+                    activity.id
+                    ] ?? [];
+
+                return attempts.map(
+                    (
+                        attempt,
+                        index,
+                    ) => ({
+                        activity,
+                        attempt,
+                        attemptNumber:
+                            attempts.length -
+                            index,
+                    }),
+                );
+            })
+            .sort((first, second) => {
+                const firstDate =
+                    getAttemptDate(
+                        first.attempt,
+                    )?.getTime() ?? 0;
+
+                const secondDate =
+                    getAttemptDate(
+                        second.attempt,
+                    )?.getTime() ?? 0;
+
+                return secondDate - firstDate;
+            });
+    }, [
+        activities,
+        attemptsByActivity,
+    ]);
+
     const dailyAttempts =
         useMemo(() => {
             return Object.values(
@@ -568,24 +715,24 @@ function StudentDashboard() {
 
     const studentName =
         profile?.displayName
-            ?.split(' ')[0]
-        || 'Estudiante';
+            ?.split(' ')[0] ||
+        'Estudiante';
 
     const totalXP =
-        gamificationProfile?.totalXP
-        ?? 0;
+        gamificationProfile?.totalXP ??
+        0;
 
     const level =
-        gamificationProfile?.level
-        ?? 1;
+        gamificationProfile?.level ??
+        1;
 
     const coins =
-        gamificationProfile?.coins
-        ?? 0;
+        gamificationProfile?.coins ??
+        0;
 
     const currentStreak =
-        gamificationProfile?.currentStreak
-        ?? 0;
+        gamificationProfile?.currentStreak ??
+        0;
 
     const nextLevelXP =
         Math.max(
@@ -605,51 +752,51 @@ function StudentDashboard() {
             100,
         );
 
-    const subjectProgress = useMemo(
-        () => {
-            return subjectDefinitions.map(
-                (subject) => {
-                    const progress =
-                        studentProgress
-                            ?.subjects[
-                        subject.key
-                        ];
+    const subjectProgress =
+        useMemo(
+            () => {
+                return subjectDefinitions.map(
+                    (subject) => {
+                        const progress =
+                            studentProgress?.subjects?.[
+                            subject.key
+                            ];
 
-                    const percentage =
-                        clampPercentage(
-                            progress?.percentage
-                            ?? 0,
-                        );
+                        const percentage =
+                            clampPercentage(
+                                progress?.percentage ??
+                                0,
+                            );
 
-                    return {
-                        ...subject,
-                        percentage,
-                        level:
-                            getProgressLabel(
-                                percentage,
-                            ),
-                        activitiesCompleted:
-                            progress
-                                ?.activitiesCompleted
-                            ?? 0,
-                        passedActivities:
-                            progress
-                                ?.passedActivities
-                            ?? 0,
-                        totalScore:
-                            progress
-                                ?.totalScore
-                            ?? 0,
-                        totalPoints:
-                            progress
-                                ?.totalPoints
-                            ?? 0,
-                    };
-                },
-            );
-        },
-        [studentProgress],
-    );
+                        return {
+                            ...subject,
+                            percentage,
+                            level:
+                                getProgressLabel(
+                                    percentage,
+                                ),
+                            activitiesCompleted:
+                                progress
+                                    ?.activitiesCompleted ??
+                                0,
+                            passedActivities:
+                                progress
+                                    ?.passedActivities ??
+                                0,
+                            totalScore:
+                                progress
+                                    ?.totalScore ??
+                                0,
+                            totalPoints:
+                                progress
+                                    ?.totalPoints ??
+                                0,
+                        };
+                    },
+                );
+            },
+            [studentProgress],
+        );
 
     const overallProgress =
         useMemo(
@@ -742,6 +889,14 @@ function StudentDashboard() {
             [subjectProgress],
         );
 
+    const selectedAnswerResults =
+        selectedHistory &&
+            Array.isArray(
+                selectedHistory.attempt.answerResults,
+            )
+            ? selectedHistory.attempt.answerResults
+            : [];
+
     return (
         <div className="student-shell">
             <header className="student-header">
@@ -780,6 +935,10 @@ function StudentDashboard() {
 
                     <a href="#progreso">
                         ▥ <span>Progreso</span>
+                    </a>
+
+                    <a href="#historial">
+                        📚 <span>Historial</span>
                     </a>
                 </nav>
 
@@ -1134,6 +1293,94 @@ function StudentDashboard() {
 
                 <section
                     className="student-section"
+                    id="logros"
+                >
+                    <div className="section-heading">
+                        <div>
+                            <p className="eyebrow">
+                                TUS RECOMPENSAS
+                            </p>
+
+                            <h2>
+                                Logros desbloqueados
+                            </h2>
+
+                            <p>
+                                Sigue jugando para conseguir
+                                nuevos logros.
+                            </p>
+                        </div>
+
+                        <strong>
+                            {studentAchievements.length}{' '}
+                            {studentAchievements.length === 1
+                                ? 'logro'
+                                : 'logros'}
+                        </strong>
+                    </div>
+
+                    {studentAchievements.length === 0 ? (
+                        <article className="student-panel">
+                            <h3>
+                                Todavía no tienes logros
+                                desbloqueados.
+                            </h3>
+
+                            <p>
+                                Completa actividades y alcanza
+                                nuevas metas para conseguirlos.
+                            </p>
+                        </article>
+                    ) : (
+                        <div className="game-grid">
+                            {studentAchievements.map(
+                                (achievement) => {
+                                    const definition =
+                                        achievementDefinitions[
+                                        achievement.achievementId
+                                        ];
+
+                                    return (
+                                        <article
+                                            className="game-card"
+                                            key={achievement.id}
+                                        >
+                                            <div className="game-card__sparkle">
+                                                ✦
+                                            </div>
+
+                                            <div className="game-card__icon">
+                                                {definition?.icon ??
+                                                    '🏅'}
+                                            </div>
+
+                                            <p>
+                                                LOGRO
+                                            </p>
+
+                                            <h3>
+                                                {definition?.name ??
+                                                    achievement.achievementId}
+                                            </h3>
+
+                                            <p>
+                                                {definition?.description ??
+                                                    'Logro desbloqueado.'}
+                                            </p>
+
+                                            <span>
+                                                ✓ Desbloqueado
+                                            </span>
+                                        </article>
+                                    );
+                                },
+                            )}
+                        </div>
+                    )}
+                </section>
+
+                <section
+                    className="student-section"
                     id="juegos"
                 >
                     <div className="section-heading">
@@ -1155,7 +1402,7 @@ function StudentDashboard() {
                     <div className="game-grid">
                         {games.map((game) => (
                             <article
-                                className={`game-card game-card--${game.tone}`}
+                                className={`game - card game - card--${game.tone}`}
                                 key={game.title}
                             >
                                 <div className="game-card__sparkle">
@@ -1366,7 +1613,7 @@ function StudentDashboard() {
                                     </div>
 
                                     <div
-                                        className={`subject-ring subject-ring--${subject.tone}`}
+                                        className={`subject - ring subject - ring--${subject.tone}`}
                                         style={{
                                             '--progress':
                                                 `${subject.percentage * 3.6} deg`,
@@ -1377,7 +1624,529 @@ function StudentDashboard() {
                         )}
                     </div>
                 </section>
+
+                <section
+                    className="student-section"
+                    id="historial"
+                >
+                    <div className="section-heading">
+                        <div>
+                            <p className="eyebrow">
+                                TU ACTIVIDAD
+                            </p>
+
+                            <h2>
+                                Historial de actividades
+                            </h2>
+
+                            <p>
+                                Revisa tus resultados y
+                                vuelve a intentar las
+                                actividades cuando quieras.
+                            </p>
+                        </div>
+
+                        <strong>
+                            {historyEntries.length}{' '}
+                            {historyEntries.length === 1
+                                ? 'intento'
+                                : 'intentos'}
+                        </strong>
+                    </div>
+
+                    {attemptsLoading && (
+                        <p>
+                            Cargando historial...
+                        </p>
+                    )}
+
+                    {!attemptsLoading &&
+                        attemptsError && (
+                            <p role="alert">
+                                {attemptsError}
+                            </p>
+                        )}
+
+                    {!attemptsLoading &&
+                        !attemptsError &&
+                        historyEntries.length ===
+                        0 && (
+                            <article className="student-panel">
+                                <h3>
+                                    Todavía no tienes
+                                    actividades
+                                    realizadas.
+                                </h3>
+
+                                <p>
+                                    Completa una actividad
+                                    para que aparezca aquí
+                                    tu historial.
+                                </p>
+                            </article>
+                        )}
+
+                    {!attemptsLoading &&
+                        !attemptsError &&
+                        historyEntries.length >
+                        0 && (
+                            <div className="game-grid">
+                                {historyEntries.map(
+                                    ({
+                                        activity,
+                                        attempt,
+                                        attemptNumber,
+                                    }) => {
+                                        const attemptDate =
+                                            getAttemptDate(
+                                                attempt,
+                                            );
+
+                                        const percentage =
+                                            attempt.totalPoints >
+                                                0
+                                                ? clampPercentage(
+                                                    (
+                                                        attempt.score /
+                                                        attempt.totalPoints
+                                                    ) * 100,
+                                                )
+                                                : 0;
+
+                                        return (
+                                            <article
+                                                className="game-card"
+                                                key={`${activity.id} -${attemptNumber}`}
+                                            >
+                                                <div className="game-card__sparkle">
+                                                    ✦
+                                                </div>
+
+                                                <div className="game-card__icon">
+                                                    {attempt.passed
+                                                        ? '🏆'
+                                                        : '📘'}
+                                                </div>
+
+                                                <p>
+                                                    {getSubjectName(
+                                                        activity.subjectId,
+                                                    )}
+                                                    {' · '}
+                                                    Intento{' '}
+                                                    {attemptNumber}
+                                                </p>
+
+                                                <h3>
+                                                    {
+                                                        activity.title
+                                                    }
+                                                </h3>
+
+                                                <p>
+                                                    {formatAttemptDate(
+                                                        attemptDate,
+                                                    )}
+                                                </p>
+
+                                                <p>
+                                                    Resultado:{' '}
+                                                    <strong>
+                                                        {
+                                                            attempt.score
+                                                        }
+                                                        {' / '}
+                                                        {
+                                                            attempt.totalPoints
+                                                        }
+                                                    </strong>
+                                                    {' · '}
+                                                    {percentage}%
+                                                </p>
+
+                                                <p>
+                                                    Correctas:{' '}
+                                                    <strong>
+                                                        {
+                                                            attempt.correctAnswers
+                                                        }
+                                                        {' de '}
+                                                        {
+                                                            attempt.totalQuestions
+                                                        }
+                                                    </strong>
+                                                </p>
+
+                                                <span>
+                                                    {attempt.passed
+                                                        ? '✓ Actividad aprobada'
+                                                        : 'Actividad no aprobada'}
+                                                </span>
+
+                                                <div
+                                                    style={{
+                                                        display:
+                                                            'flex',
+                                                        gap: '0.75rem',
+                                                        flexWrap:
+                                                            'wrap',
+                                                        marginTop:
+                                                            '1rem',
+                                                    }}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setSelectedHistory(
+                                                                {
+                                                                    activity,
+                                                                    attempt,
+                                                                    attemptNumber,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        Ver resultado
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handlePlayActivity(
+                                                                activity.id,
+                                                            )
+                                                        }
+                                                    >
+                                                        Reintentar
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        );
+                                    },
+                                )}
+                            </div>
+                        )}
+                </section>
             </main>
+
+            {selectedHistory && (
+                <div
+                    role="presentation"
+                    onClick={() =>
+                        setSelectedHistory(
+                            null,
+                        )
+                    }
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                        background:
+                            'rgba(15, 23, 42, 0.55)',
+                    }}
+                >
+                    <article
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="student-result-title"
+                        onClick={(event) =>
+                            event.stopPropagation()
+                        }
+                        style={{
+                            width: 'min(100%, 720px)',
+                            maxHeight: '90vh',
+                            overflowY: 'auto',
+                            padding: '2rem',
+                            borderRadius: '1.25rem',
+                            background: 'white',
+                            boxShadow:
+                                '0 24px 80px rgba(15, 23, 42, 0.25)',
+                        }}
+                    >
+                        <div className="section-heading">
+                            <div>
+                                <p className="eyebrow">
+                                    RESULTADO
+                                </p>
+
+                                <h2 id="student-result-title">
+                                    {
+                                        selectedHistory
+                                            .activity
+                                            .title
+                                    }
+                                </h2>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSelectedHistory(
+                                        null,
+                                    )
+                                }
+                                aria-label="Cerrar resultado"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p>
+                            {
+                                getSubjectName(
+                                    selectedHistory
+                                        .activity
+                                        .subjectId,
+                                )
+                            }
+                        </p>
+
+                        <p>
+                            Intento{' '}
+                            {
+                                selectedHistory.attemptNumber
+                            }
+                            {' · '}
+                            {formatAttemptDate(
+                                getAttemptDate(
+                                    selectedHistory.attempt,
+                                ),
+                            )}
+                        </p>
+
+                        <div className="student-stats">
+                            <article className="student-stat card">
+                                <div>
+                                    <span>
+                                        Puntuación
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            selectedHistory
+                                                .attempt
+                                                .score
+                                        }
+                                        {' / '}
+                                        {
+                                            selectedHistory
+                                                .attempt
+                                                .totalPoints
+                                        }
+                                    </strong>
+                                </div>
+                            </article>
+
+                            <article className="student-stat card">
+                                <div>
+                                    <span>
+                                        Correctas
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            selectedHistory
+                                                .attempt
+                                                .correctAnswers
+                                        }
+                                        {' / '}
+                                        {
+                                            selectedHistory
+                                                .attempt
+                                                .totalQuestions
+                                        }
+                                    </strong>
+                                </div>
+                            </article>
+                        </div>
+
+                        <p>
+                            Estado:{' '}
+                            <strong>
+                                {selectedHistory.attempt
+                                    .passed
+                                    ? 'Actividad aprobada ✓'
+                                    : 'Actividad no aprobada'}
+                            </strong>
+                        </p>
+
+                        <section
+                            style={{
+                                marginTop: '1.5rem',
+                            }}
+                        >
+                            <div
+                                className="section-heading"
+                                style={{
+                                    marginBottom:
+                                        '1rem',
+                                }}
+                            >
+                                <div>
+                                    <p className="eyebrow">
+                                        DETALLE
+                                    </p>
+
+                                    <h3>
+                                        Tus respuestas
+                                    </h3>
+                                </div>
+
+                                <strong>
+                                    {
+                                        selectedAnswerResults.length
+                                    }{' '}
+                                    preguntas
+                                </strong>
+                            </div>
+
+                            {selectedAnswerResults.length ===
+                                0 ? (
+                                <article className="student-panel">
+                                    <p>
+                                        No hay detalle de
+                                        respuestas
+                                        disponible para
+                                        este intento.
+                                    </p>
+                                </article>
+                            ) : (
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gap: '1rem',
+                                    }}
+                                >
+                                    {selectedAnswerResults.map(
+                                        (
+                                            result,
+                                            index,
+                                        ) => (
+                                            <article
+                                                key={`${selectedHistory.attempt.attemptId} -${result.questionId} -${index}`}
+                                                style={{
+                                                    padding:
+                                                        '1rem',
+                                                    border:
+                                                        '1px solid #e2e8f0',
+                                                    borderRadius:
+                                                        '1rem',
+                                                    background:
+                                                        result.isCorrect
+                                                            ? '#f0fdf4'
+                                                            : '#fff7ed',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display:
+                                                            'flex',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems:
+                                                            'flex-start',
+                                                        gap:
+                                                            '1rem',
+                                                        marginBottom:
+                                                            '0.75rem',
+                                                    }}
+                                                >
+                                                    <strong>
+                                                        Pregunta{' '}
+                                                        {index +
+                                                            1}
+                                                    </strong>
+
+                                                    <span>
+                                                        {result.isCorrect
+                                                            ? '✓ Correcta'
+                                                            : '✕ Incorrecta'}
+                                                    </span>
+                                                </div>
+
+                                                <p>
+                                                    <strong>
+                                                        Respuesta:
+                                                    </strong>{' '}
+                                                    {formatAnswer(
+                                                        result.answerText ??
+                                                        result.answer,
+                                                    )}
+                                                </p>
+
+                                                <p>
+                                                    <strong>
+                                                        Puntos:
+                                                    </strong>{' '}
+                                                    {
+                                                        result.pointsEarned
+                                                    }
+                                                    {' / '}
+                                                    {
+                                                        result.pointsAvailable
+                                                    }
+                                                </p>
+
+                                                <p
+                                                    style={{
+                                                        fontSize:
+                                                            '0.8rem',
+                                                        opacity:
+                                                            0.65,
+                                                        marginBottom:
+                                                            0,
+                                                    }}
+                                                >
+                                                    ID de pregunta:{' '}
+                                                    {
+                                                        result.questionId
+                                                    }
+                                                </p>
+                                            </article>
+                                        ),
+                                    )}
+                                </div>
+                            )}
+                        </section>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '0.75rem',
+                                flexWrap: 'wrap',
+                                marginTop: '1.5rem',
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handlePlayActivity(
+                                        selectedHistory
+                                            .activity.id,
+                                    )
+                                }
+                            >
+                                Reintentar actividad
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSelectedHistory(
+                                        null,
+                                    )
+                                }
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            )}
         </div>
     );
 }
