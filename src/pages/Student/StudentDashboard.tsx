@@ -31,6 +31,11 @@ import {
     type ActivityAttempt,
 } from '../../services/firebase/activities';
 
+import {
+    getStudentAssignments,
+    type StudentAssignment,
+} from '../../services/firebase/assignments';
+
 import type {
     GamificationProfile,
     ProgressSubjectKey,
@@ -198,6 +203,87 @@ function getAttemptDate(
     return null;
 }
 
+function getAssignmentDate(
+    value: unknown,
+): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    if (
+        value instanceof Date &&
+        !Number.isNaN(value.getTime())
+    ) {
+        return value;
+    }
+
+    if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toDate' in value &&
+        typeof value.toDate === 'function'
+    ) {
+        const date =
+            value.toDate();
+
+        if (
+            date instanceof Date &&
+            !Number.isNaN(date.getTime())
+        ) {
+            return date;
+        }
+    }
+
+    if (
+        typeof value === 'object' &&
+        value !== null &&
+        'seconds' in value &&
+        typeof value.seconds === 'number'
+    ) {
+        const date =
+            new Date(
+                value.seconds * 1000,
+            );
+
+        if (!Number.isNaN(date.getTime())) {
+            return date;
+        }
+    }
+
+    if (
+        typeof value === 'string' ||
+        typeof value === 'number'
+    ) {
+        const date =
+            new Date(value);
+
+        if (!Number.isNaN(date.getTime())) {
+            return date;
+        }
+    }
+
+    return null;
+}
+
+function formatAssignmentDate(
+    value: unknown,
+): string {
+    const date =
+        getAssignmentDate(value);
+
+    if (!date) {
+        return 'Sin fecha límite';
+    }
+
+    return new Intl.DateTimeFormat(
+        'es-CO',
+        {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        },
+    ).format(date);
+}
+
 function isToday(
     date: Date | null,
 ): boolean {
@@ -306,6 +392,11 @@ function StudentDashboard() {
     ] = useState<StudentActivity[]>([]);
 
     const [
+        studentAssignments,
+        setStudentAssignments,
+    ] = useState<StudentAssignment[]>([]);
+
+    const [
         attemptsByActivity,
         setAttemptsByActivity,
     ] = useState<Record<string, ActivityAttempt[]>>(
@@ -328,6 +419,11 @@ function StudentDashboard() {
     ] = useState(true);
 
     const [
+        assignmentsLoading,
+        setAssignmentsLoading,
+    ] = useState(true);
+
+    const [
         attemptsLoading,
         setAttemptsLoading,
     ] = useState(true);
@@ -342,6 +438,13 @@ function StudentDashboard() {
     const [
         activitiesError,
         setActivitiesError,
+    ] = useState<string | null>(
+        null,
+    );
+
+    const [
+        assignmentsError,
+        setAssignmentsError,
     ] = useState<string | null>(
         null,
     );
@@ -366,6 +469,7 @@ function StudentDashboard() {
         if (!user) {
             setProfileLoading(false);
             setProgressLoading(false);
+            setAssignmentsLoading(false);
             return;
         }
 
@@ -446,6 +550,57 @@ function StudentDashboard() {
         }
 
         void loadStudentData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            setAssignmentsLoading(false);
+            return;
+        }
+
+        const studentId =
+            user.uid;
+
+        let isMounted = true;
+
+        async function loadAssignments() {
+            try {
+                setAssignmentsLoading(true);
+                setAssignmentsError(null);
+
+                const data =
+                    await getStudentAssignments(
+                        studentId,
+                    );
+
+                if (isMounted) {
+                    setStudentAssignments(
+                        data,
+                    );
+                }
+            } catch (error) {
+                console.error(
+                    'No se pudieron cargar las asignaciones del estudiante:',
+                    error,
+                );
+
+                if (isMounted) {
+                    setAssignmentsError(
+                        'No se pudieron cargar tus asignaciones.',
+                    );
+                }
+            } finally {
+                if (isMounted) {
+                    setAssignmentsLoading(false);
+                }
+            }
+        }
+
+        void loadAssignments();
 
         return () => {
             isMounted = false;
@@ -1135,6 +1290,181 @@ function StudentDashboard() {
                                     }
                                 </strong>
                             </p>
+                        )}
+                </section>
+
+                <section className="student-section">
+                    <div className="section-heading">
+                        <div>
+                            <p className="eyebrow">
+                                PARA TI
+                            </p>
+
+                            <h2>
+                                Mis asignaciones
+                            </h2>
+
+                            <p>
+                                Actividades que tus docentes
+                                te han asignado.
+                            </p>
+                        </div>
+
+                        <strong>
+                            {
+                                studentAssignments.filter(
+                                    (assignment) =>
+                                        assignment.status ===
+                                        'assigned',
+                                ).length
+                            }{' '}
+                            pendientes
+                        </strong>
+                    </div>
+
+                    {assignmentsLoading && (
+                        <p>
+                            Cargando asignaciones...
+                        </p>
+                    )}
+
+                    {assignmentsError && (
+                        <p role="alert">
+                            {assignmentsError}
+                        </p>
+                    )}
+
+                    {!assignmentsLoading &&
+                        !assignmentsError &&
+                        studentAssignments.length ===
+                        0 && (
+                            <article className="student-panel">
+                                <h3>
+                                    No tienes asignaciones
+                                    todavía.
+                                </h3>
+
+                                <p>
+                                    Cuando un docente te
+                                    asigne una actividad,
+                                    aparecerá aquí.
+                                </p>
+                            </article>
+                        )}
+
+                    {!assignmentsLoading &&
+                        !assignmentsError &&
+                        studentAssignments.length >
+                        0 && (
+                            <div className="game-grid">
+                                {studentAssignments.map(
+                                    (assignment) => {
+                                        const activity =
+                                            activities.find(
+                                                (item) =>
+                                                    item.id ===
+                                                    assignment.activityId,
+                                            );
+
+                                        const isCompleted =
+                                            assignment.status ===
+                                            'completed';
+
+                                        const isCancelled =
+                                            assignment.status ===
+                                            'cancelled';
+
+                                        const assignmentTarget =
+                                            assignment.targetType ===
+                                                'group'
+                                                ? 'Asignada a tu grupo'
+                                                : 'Asignada por tu docente';
+
+                                        return (
+                                            <article
+                                                className="game-card"
+                                                key={
+                                                    assignment.id
+                                                }
+                                            >
+                                                <div className="game-card__sparkle">
+                                                    ✦
+                                                </div>
+
+                                                <div className="game-card__icon">
+                                                    {isCompleted
+                                                        ? '✅'
+                                                        : isCancelled
+                                                            ? '🚫'
+                                                            : '📌'}
+                                                </div>
+
+                                                <p>
+                                                    ASIGNACIÓN
+                                                </p>
+
+                                                <h3>
+                                                    {activity?.title ??
+                                                        'Actividad no disponible'}
+                                                </h3>
+
+                                                <p>
+                                                    {assignmentTarget}
+                                                </p>
+
+                                                {activity?.description && (
+                                                    <p>
+                                                        {
+                                                            activity.description
+                                                        }
+                                                    </p>
+                                                )}
+
+                                                <p>
+                                                    Fecha límite:{' '}
+                                                    <strong>
+                                                        {formatAssignmentDate(
+                                                            assignment.dueAt,
+                                                        )}
+                                                    </strong>
+                                                </p>
+
+                                                <span>
+                                                    {isCompleted
+                                                        ? '✓ Completada'
+                                                        : isCancelled
+                                                            ? 'Asignación cancelada'
+                                                            : 'Pendiente'}
+                                                </span>
+
+                                                {!isCancelled &&
+                                                    activity && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handlePlayActivity(
+                                                                    activity.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            {isCompleted
+                                                                ? 'Volver a realizar'
+                                                                : 'Realizar actividad'}
+                                                        </button>
+                                                    )}
+
+                                                {!isCancelled &&
+                                                    !activity && (
+                                                        <p>
+                                                            Esta actividad ya no
+                                                            está disponible.
+                                                        </p>
+                                                    )}
+                                            </article>
+                                        );
+                                    },
+                                )}
+                            </div>
                         )}
                 </section>
 

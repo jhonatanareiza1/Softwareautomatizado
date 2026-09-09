@@ -2,7 +2,6 @@ import {
     httpsCallable,
     type HttpsCallableResult,
 } from 'firebase/functions';
-
 import {
     firebaseFunctions,
 } from './config';
